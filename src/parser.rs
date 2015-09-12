@@ -1,4 +1,4 @@
-use rules::{ExpressionEvaluator,ExpressionMember,Operator,ValueType};
+use expressions::{ExpressionEvaluator,ExpressionMember,Operator,ValueType};
 
 peg_file! parser("parser_rules.peg");
 
@@ -36,7 +36,10 @@ pub enum Node {
     Pow((N,N)),
     I64(i64),
     F32(f32),
-    Variable(String),
+    Variable {
+        local: bool,
+        name: String,
+    },
 }
 
 pub fn convert(expression: Node) -> ExpressionEvaluator {
@@ -80,8 +83,8 @@ impl Node {
             Node::F32(num) => {
                 res.push(ExpressionMember::Constant(ValueType::F32(num)));
             }
-            Node::Variable(name) => {
-                res.push(ExpressionMember::Variable(name));
+            Node::Variable{local,name} => {
+                res.push(ExpressionMember::Variable{local:local,name:name});
             }
         }
     }

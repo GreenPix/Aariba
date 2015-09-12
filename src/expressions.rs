@@ -128,7 +128,10 @@ impl ValueType {
 pub enum ExpressionMember {
     Op(Operator),
     Constant(ValueType),
-    Variable(String),
+    Variable {
+        local: bool,
+        name: String,
+    },
 }
 
 #[derive(Clone,Copy,Debug)]
@@ -153,13 +156,19 @@ pub enum ExpressionError {
 
 impl ExpressionEvaluator {
     /// Evaluates an expression using a context to get variables
-    pub fn evaluate<T: Gettable>(&self, context: &T) -> Result<ValueType,ExpressionError> {
+    pub fn evaluate<T,V>(&self, global_variables: &T, local_variables: &V) -> Result<ValueType,ExpressionError>
+    where T: Gettable,
+          V: Gettable {
         let mut stack = Vec::new();
         for member in self.expression.iter() {
             match *member {
                 Constant(value) => stack.push(value),
-                Variable(ref name) => {
-                    let value = try!(context.get_var(&name).ok_or_else(|| VariableNotFound(name.clone())));
+                Variable{local,ref name} => {
+                    let value = if local {
+                        try!(local_variables.get_var(&name).ok_or_else(|| VariableNotFound(name.clone())))
+                    } else {
+                        try!(global_variables.get_var(&name).ok_or_else(|| VariableNotFound(name.clone())))
+                    };
                     stack.push(value);
                 },
                 Op(operator) => {
@@ -184,10 +193,21 @@ impl ExpressionEvaluator {
         Ok(result)
     }
 
-    /// Get list of variables referenced by this expression
-    pub fn get_variable_list(&self) -> Vec<String> {
+    /// Get list of global variables referenced by this expression
+    pub fn get_global_variable_list(&self) -> Vec<String> {
         self.expression.iter().filter_map(|member| {
-            if let Variable(ref name) = *member {
+            if let Variable{local: false, ref name} = *member {
+                Some(name.clone())
+            } else {
+                None
+            }
+        }).collect()
+    }
+
+    /// Get list of local variables referenced by this expression
+    pub fn get_local_variable_list(&self) -> Vec<String> {
+        self.expression.iter().filter_map(|member| {
+            if let Variable{local: true, ref name} = *member {
                 Some(name.clone())
             } else {
                 None

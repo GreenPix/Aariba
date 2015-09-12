@@ -1,5 +1,5 @@
 use super::{Node};
-use rules::*;
+use expressions::*;
 
 #[pub]
 expression -> Node
@@ -41,7 +41,10 @@ prio4_right -> (Operator,Node)
         = op:prio3_operator r:prio4 { (op,r) }
 
 variable -> Node
-        = [a-z]+ { Node::Variable(match_str.to_string()) }
+        = l:"$"? name:ident { Node::Variable {local: !l.is_some(), name: name.to_string()} }
+
+ident -> String
+        = [a-zA-Z]+ { match_str.to_string() }
 
 space = [ \t\n]
 spaces = [ \t\n]*
