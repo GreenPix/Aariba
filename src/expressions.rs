@@ -14,6 +14,12 @@ impl Gettable for HashMap<String,ValueType> {
     }
 }
 
+impl Gettable for () {
+    fn get_var(&self, _: &str) -> Option<ValueType> {
+        None
+    }
+}
+
 #[derive(Clone,Copy,Debug)]
 pub enum ValueType {
     I64(i64),
@@ -239,7 +245,7 @@ mod test {
             Op(Operator::Plus),
             ]);
 
-        assert!(expression.evaluate(&context).unwrap().get_i64().unwrap() == 3);
+        assert!(expression.evaluate(&context,&()).unwrap().get_i64().unwrap() == 3);
     }
 
     #[test]
@@ -251,7 +257,7 @@ mod test {
             Op(Operator::Plus),
             Op(Operator::Multiply),
             ]);
-        assert!(expression.evaluate(&context).is_err());
+        assert!(expression.evaluate(&context,&()).is_err());
     }
 
     #[test]
@@ -262,13 +268,13 @@ mod test {
         // Calculates 2 * (forty_two / two) - 3
         let expression = ExpressionEvaluator::new(vec! [
             Constant(ValueType::I64(2)),
-            Variable("forty_two".to_string()),
-            Variable("two".to_string()),
+            Variable{local: false, name: "forty_two".to_string()},
+            Variable{local: false, name: "two".to_string()},
             Op(Operator::Divide),
             Op(Operator::Multiply),
             Constant(ValueType::I64(3)),
             Op(Operator::Minus),
             ]);
-        assert!(expression.evaluate(&context).unwrap().get_i64().unwrap() == 39);
+        assert!(expression.evaluate(&context,&()).unwrap().get_i64().unwrap() == 39);
     }
 }

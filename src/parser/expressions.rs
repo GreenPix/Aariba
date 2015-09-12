@@ -1,6 +1,6 @@
 use expressions::{ExpressionEvaluator,ExpressionMember,Operator,ValueType};
 
-peg_file! parser("parser_rules.peg");
+peg_file! expressions_parser("expressions_rules.peg");
 
 fn combine(left: Node, right_vec: Vec<(Operator,Node)>) -> Node {
     let mut res = left;
@@ -90,72 +90,90 @@ impl Node {
     }
 }
 
-/*
-impl Prio2 {
-    fn convert(self, res: &mut Vec<ExpressionMember>) {
-        match self {
-            Prio2::Multiply((l,r)) => {
-                l.convert(res);
-                r.convert(res);
-                res.push(ExpressionMember::Op(Operator::Multiply));
-            }
-            Prio2::Divide((l,r)) => {
-                l.convert(res);
-                r.convert(res);
-                res.push(ExpressionMember::Op(Operator::Divide));
-            }
-            Prio2::None(p) => p.convert(res),
-        }
-    }
-}
-
-impl Prio3 {
-    fn convert(self, res: &mut Vec<ExpressionMember>) {
-        match self {
-            Prio3::Pow((l,r)) => {
-                l.convert(res);
-                r.convert(res);
-                unimplemented!();
-                //res.push(ExpressionMember::Op(Operator::Plus));
-            }
-            Prio3::None(p) => p.convert(res),
-        }
-    }
-}
-
-impl Prio4 {
-    fn convert(self, res: &mut Vec<ExpressionMember>) {
-        match self {
-            Prio4::I64(num) => {
-                res.push(ExpressionMember::Constant(ValueType::I64(num)));
-            }
-            Prio4::F32(num) => {
-                res.push(ExpressionMember::Constant(ValueType::F32(num)));
-            }
-            Prio4::Variable(name) => {
-                res.push(ExpressionMember::Variable(name));
-            }
-            Prio4::Prio1(p) => p.convert(res),
-        }
-    }
-}
-*/
-pub fn parse(input: &str) -> Result<ExpressionEvaluator,parser::ParseError> {
-    let tree = try!(parser::expression(input));
+pub fn parse(input: &str) -> Result<ExpressionEvaluator,expressions_parser::ParseError> {
+    let tree = try!(expressions_parser::expression(input));
     Ok(convert(tree))
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{Prio1,Prio2,Prio3,Prio4};
-    use super::parser;
+    use super::{Node};
+    use super::expressions_parser;
     #[test]
     fn simple_addition() {
         let to_parse = "1 + 2";
-        let res = parser::expression(to_parse).unwrap();
+        let res = expressions_parser::expression(to_parse).unwrap();
         match res {
-            Prio1::Plus((Prio2::None(Prio3::None(Prio4::I64(1))),
-                         Prio2::None(Prio3::None(Prio4::I64(2))))) => {}
+            Node::Plus((box Node::I64(1), box Node::I64(2))) => {}
+            _ => panic!(),
+        }
+    }
+    #[test]
+    fn multiple_addition() {
+        let to_parse = "1 + 2 + 3";
+        let res = expressions_parser::expression(to_parse).unwrap();
+        match res {
+            Node::Plus((
+                    box Node::Plus((box Node::I64(1), box Node::I64(2))),
+                    box Node::I64(3)
+                    )) => {}
+            _ => panic!(),
+        }
+    }
+    #[test]
+    fn substraction_associativity() {
+        let to_parse = "1 - 2 + 3";
+        let res = expressions_parser::expression(to_parse).unwrap();
+        match res {
+            Node::Plus((
+                    box Node::Minus((box Node::I64(1), box Node::I64(2))),
+                    box Node::I64(3)
+                    )) => {}
+            _ => panic!(),
+        }
+        let to_parse = "1 + 2 - 3";
+        let res = expressions_parser::expression(to_parse).unwrap();
+        match res {
+            Node::Minus((
+                    box Node::Plus((box Node::I64(1), box Node::I64(2))),
+                    box Node::I64(3)
+                    )) => {}
+            _ => panic!(),
+        }
+    }
+    #[test]
+    fn priority() {
+        let to_parse = "1 + 2 * 3";
+        let res = expressions_parser::expression(to_parse).unwrap();
+        match res {
+            Node::Plus((
+                    box Node::I64(1),
+                    box Node::Multiply((box Node::I64(2), box Node::I64(3)))
+                    )) => {}
+            _ => panic!(),
+        }
+        let to_parse = "1 * 2 + 3";
+        let res = expressions_parser::expression(to_parse).unwrap();
+        match res {
+            Node::Plus((
+                    box Node::Multiply((box Node::I64(1), box Node::I64(2))),
+                    box Node::I64(3)
+                    )) => {}
+            _ => panic!(),
+        }
+    }
+    #[test]
+    fn local_global_variables() {
+        let to_parse = "local + $global";
+        let res = expressions_parser::expression(to_parse).unwrap();
+        match res {
+            Node::Plus((
+                    box Node::Variable{local: true, name: local},
+                    box Node::Variable{local: false, name: global}
+                    )) => {
+                assert_eq!(&local, "local");
+                assert_eq!(&global, "global");
+            }
             _ => panic!(),
         }
     }
