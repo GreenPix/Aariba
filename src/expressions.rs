@@ -4,19 +4,30 @@ use std::collections::HashMap;
 use self::ExpressionMember::*;
 use self::ExpressionError::*;
 
-pub trait Gettable {
-    fn get_var(&self, var: &str) -> Option<ValueType>;
+pub trait Store {
+    fn get_attribute(&self, var: &str) -> Option<ValueType>;
+    /// Set the attribute "var" to "value"
+    ///
+    /// Returns the old value, if any
+    fn set_attribute(&mut self, var: &str, value: ValueType) -> Result<Option<ValueType>,()>;
 }
 
-impl Gettable for HashMap<String,ValueType> {
-    fn get_var(&self, var: &str) -> Option<ValueType> {
+impl Store for HashMap<String,ValueType> {
+    fn get_attribute(&self, var: &str) -> Option<ValueType> {
         self.get(var).cloned()
+    }
+
+    fn set_attribute(&mut self, var: &str, value: ValueType) -> Result<Option<ValueType>,()> {
+        Ok(self.insert(var.to_string(),value))
     }
 }
 
-impl Gettable for () {
-    fn get_var(&self, _: &str) -> Option<ValueType> {
+impl Store for () {
+    fn get_attribute(&self, _: &str) -> Option<ValueType> {
         None
+    }
+    fn set_attribute(&mut self, _: &str, _: ValueType) -> Result<Option<ValueType>,()> {
+        Err(())
     }
 }
 
@@ -163,17 +174,17 @@ pub enum ExpressionError {
 impl ExpressionEvaluator {
     /// Evaluates an expression using a context to get variables
     pub fn evaluate<T,V>(&self, global_variables: &T, local_variables: &V) -> Result<ValueType,ExpressionError>
-    where T: Gettable,
-          V: Gettable {
+    where T: Store,
+          V: Store {
         let mut stack = Vec::new();
         for member in self.expression.iter() {
             match *member {
                 Constant(value) => stack.push(value),
                 Variable{local,ref name} => {
                     let value = if local {
-                        try!(local_variables.get_var(&name).ok_or_else(|| VariableNotFound(name.clone())))
+                        try!(local_variables.get_attribute(&name).ok_or_else(|| VariableNotFound(name.clone())))
                     } else {
-                        try!(global_variables.get_var(&name).ok_or_else(|| VariableNotFound(name.clone())))
+                        try!(global_variables.get_attribute(&name).ok_or_else(|| VariableNotFound(name.clone())))
                     };
                     stack.push(value);
                 },
