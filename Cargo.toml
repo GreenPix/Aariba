@@ -2,3 +2,7 @@
 name = "expression-evaluator"
 version = "0.1.0"
 authors = ["Vaelden <maugan.villatel@gmail.com>"]
+
+[dependencies]
+peg = "*"
+log = "*"
