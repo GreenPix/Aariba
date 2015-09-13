@@ -9,7 +9,7 @@ expression -> ExpressionEvaluator
 	= tree:expression_tree { expressions::convert(tree) }
 #[pub]
 expression_tree -> Node
-	= prio1
+	= spaces node:prio1 spaces {node}
 prio1 -> Node
 	= l:prio2 r:prio2_right* { expressions::combine(l,r) }
 prio2 -> Node
@@ -60,7 +60,7 @@ rules_list -> Vec<(Variable,ExpressionEvaluator)>
         = assignment*
 
 assignment -> (Variable,ExpressionEvaluator)
-        = global:"$"? name:ident spaces "=" spaces expr:expression ";" {
+        = global:"$"? name:ident spaces "=" spaces expr:expression ";" spaces {
             (Variable::new(global.is_none(), name), expr)
         }
 
