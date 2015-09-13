@@ -1,15 +1,21 @@
-use super::{Node};
+use super::expressions::{Node};
+use super::expressions;
 use expressions::*;
 
+use rules::{Variable,RulesEvaluator};
+
 #[pub]
-expression -> Node
+expression -> ExpressionEvaluator
+	= tree:expression_tree { expressions::convert(tree) }
+#[pub]
+expression_tree -> Node
 	= prio1
 prio1 -> Node
-	= l:prio2 r:prio2_right* { super::combine(l,r) }
+	= l:prio2 r:prio2_right* { expressions::combine(l,r) }
 prio2 -> Node
-	= l:prio3 r:prio3_right* { super::combine(l,r) }
+	= l:prio3 r:prio3_right* { expressions::combine(l,r) }
 prio3 -> Node
-	= l:prio4 r:prio4_right* { super::combine(l,r) }
+	= l:prio4 r:prio4_right* { expressions::combine(l,r) }
 prio4 -> Node
 	= "(" v:prio1 ")" { v }
         / number
@@ -49,3 +55,15 @@ ident -> String
 space = [ \t\n]
 spaces = [ \t\n]*
 
+#[pub]
+rules_list -> Vec<(Variable,ExpressionEvaluator)>
+        = assignment*
+
+assignment -> (Variable,ExpressionEvaluator)
+        = global:"$"? name:ident spaces "=" spaces expr:expression ";" {
+            (Variable::new(global.is_none(), name), expr)
+        }
+
+#[pub]
+rules_evaluator -> RulesEvaluator
+        = l:rules_list { RulesEvaluator::new(l) }

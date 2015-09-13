@@ -1,8 +1,6 @@
 use expressions::{ExpressionEvaluator,ExpressionMember,Operator,ValueType};
 
-peg_file! expressions_parser("expressions_rules.peg");
-
-fn combine(left: Node, right_vec: Vec<(Operator,Node)>) -> Node {
+pub fn combine(left: Node, right_vec: Vec<(Operator,Node)>) -> Node {
     let mut res = left;
     for (op, right) in right_vec {
         match op {
@@ -26,14 +24,13 @@ fn combine(left: Node, right_vec: Vec<(Operator,Node)>) -> Node {
     res
 }
 
-pub type N = Box<Node>;
 #[derive(Debug,Clone)]
 pub enum Node {
-    Plus((N,N)),
-    Minus((N,N)),
-    Multiply((N,N)),
-    Divide((N,N)),
-    Pow((N,N)),
+    Plus((Box<Node>,Box<Node>)),
+    Minus((Box<Node>,Box<Node>)),
+    Multiply((Box<Node>,Box<Node>)),
+    Divide((Box<Node>,Box<Node>)),
+    Pow((Box<Node>,Box<Node>)),
     I64(i64),
     F32(f32),
     Variable {
@@ -90,19 +87,14 @@ impl Node {
     }
 }
 
-pub fn parse(input: &str) -> Result<ExpressionEvaluator,expressions_parser::ParseError> {
-    let tree = try!(expressions_parser::expression(input));
-    Ok(convert(tree))
-}
-
 #[cfg(test)]
 mod tests {
     use super::{Node};
-    use super::expressions_parser;
+    use super::super::parser;
     #[test]
     fn simple_addition() {
         let to_parse = "1 + 2";
-        let res = expressions_parser::expression(to_parse).unwrap();
+        let res = parser::expression_tree(to_parse).unwrap();
         match res {
             Node::Plus((box Node::I64(1), box Node::I64(2))) => {}
             _ => panic!(),
@@ -111,7 +103,7 @@ mod tests {
     #[test]
     fn multiple_addition() {
         let to_parse = "1 + 2 + 3";
-        let res = expressions_parser::expression(to_parse).unwrap();
+        let res = parser::expression_tree(to_parse).unwrap();
         match res {
             Node::Plus((
                     box Node::Plus((box Node::I64(1), box Node::I64(2))),
@@ -123,7 +115,7 @@ mod tests {
     #[test]
     fn substraction_associativity() {
         let to_parse = "1 - 2 + 3";
-        let res = expressions_parser::expression(to_parse).unwrap();
+        let res = parser::expression_tree(to_parse).unwrap();
         match res {
             Node::Plus((
                     box Node::Minus((box Node::I64(1), box Node::I64(2))),
@@ -132,7 +124,7 @@ mod tests {
             _ => panic!(),
         }
         let to_parse = "1 + 2 - 3";
-        let res = expressions_parser::expression(to_parse).unwrap();
+        let res = parser::expression_tree(to_parse).unwrap();
         match res {
             Node::Minus((
                     box Node::Plus((box Node::I64(1), box Node::I64(2))),
@@ -144,7 +136,7 @@ mod tests {
     #[test]
     fn priority() {
         let to_parse = "1 + 2 * 3";
-        let res = expressions_parser::expression(to_parse).unwrap();
+        let res = parser::expression_tree(to_parse).unwrap();
         match res {
             Node::Plus((
                     box Node::I64(1),
@@ -153,7 +145,7 @@ mod tests {
             _ => panic!(),
         }
         let to_parse = "1 * 2 + 3";
-        let res = expressions_parser::expression(to_parse).unwrap();
+        let res = parser::expression_tree(to_parse).unwrap();
         match res {
             Node::Plus((
                     box Node::Multiply((box Node::I64(1), box Node::I64(2))),
@@ -165,7 +157,7 @@ mod tests {
     #[test]
     fn local_global_variables() {
         let to_parse = "local + $global";
-        let res = expressions_parser::expression(to_parse).unwrap();
+        let res = parser::expression_tree(to_parse).unwrap();
         match res {
             Node::Plus((
                     box Node::Variable{local: true, name: local},

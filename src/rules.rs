@@ -2,9 +2,15 @@ use std::collections::HashMap;
 
 use expressions::*;
 
-struct Variable {
+pub struct Variable {
     local: bool,
     name: String,
+}
+
+impl Variable {
+    pub fn new(local: bool, name: String) -> Variable {
+        Variable {local: local, name: name}
+    }
 }
 
 pub struct RulesEvaluator {
@@ -37,5 +43,9 @@ impl RulesEvaluator {
             }
         }
         Ok(())
+    }
+
+    pub fn new(expressions: Vec<(Variable,ExpressionEvaluator)>) -> RulesEvaluator {
+        RulesEvaluator { expressions: expressions }
     }
 }
