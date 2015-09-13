@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use expressions::*;
 
+#[derive(Clone,Debug)]
 pub struct Variable {
     local: bool,
     name: String,
@@ -13,10 +14,12 @@ impl Variable {
     }
 }
 
+#[derive(Clone,Debug)]
 pub struct RulesEvaluator {
     expressions: Vec<(Variable,ExpressionEvaluator)>,
 }
 
+#[derive(Clone,Debug)]
 pub enum RulesError {
     Expression(ExpressionError),
     CannotSetVariable(String),
