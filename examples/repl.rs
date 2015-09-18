@@ -1,4 +1,4 @@
-extern crate expression_evaluator;
+extern crate aariba;
 
 use std::io::{self,BufRead};
 use std::collections::HashMap;
@@ -14,7 +14,7 @@ fn main() {
                 let mut new_rules = String::new();
                 write!(new_rules, "{}{}\n", accumulated_rules, line).unwrap();
                 println!("Evaluating the following rules:\n{}", new_rules);
-                let res = expression_evaluator::parser::rules_evaluator(&new_rules);
+                let res = aariba::parser::rules_evaluator(&new_rules);
                 match res {
                     Ok(evaluator) => {
                         let mut global_variables = HashMap::new();

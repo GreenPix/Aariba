@@ -1,4 +1,4 @@
-extern crate expression_evaluator;
+extern crate aariba;
 
 use std::env;
 use std::fs::File;
@@ -19,7 +19,7 @@ fn main() {
         };
         let mut string = String::new();
         file.read_to_string(&mut string).unwrap();
-        let evaluator = expression_evaluator::parser::rules_evaluator(&string).unwrap();
+        let evaluator = aariba::parser::rules_evaluator(&string).unwrap();
         evaluator.evaluate(&mut global_variables).unwrap();
         println!("Evaluation of rules {}\n => {:#?}", string, global_variables);
     }
