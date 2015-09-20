@@ -1,136 +1,33 @@
-use std::ops::{Add,Sub,Mul,Div};
 use std::collections::HashMap;
 
 use self::ExpressionMember::*;
 use self::ExpressionError::*;
 
 pub trait Store {
-    fn get_attribute(&self, var: &str) -> Option<ValueType>;
+    fn get_attribute(&self, var: &str) -> Option<f64>;
     /// Set the attribute "var" to "value"
     ///
     /// Returns the old value, if any
-    fn set_attribute(&mut self, var: &str, value: ValueType) -> Result<Option<ValueType>,()>;
+    fn set_attribute(&mut self, var: &str, value: f64) -> Result<Option<f64>,()>;
 }
 
-impl Store for HashMap<String,ValueType> {
-    fn get_attribute(&self, var: &str) -> Option<ValueType> {
+impl Store for HashMap<String,f64> {
+    fn get_attribute(&self, var: &str) -> Option<f64> {
         self.get(var).cloned()
     }
 
-    fn set_attribute(&mut self, var: &str, value: ValueType) -> Result<Option<ValueType>,()> {
-        Ok(self.insert(var.to_string(),value))
+    fn set_attribute(&mut self, var: &str, value: f64) -> Result<Option<f64>,()> {
+        Ok(self.insert(var.into(), value))
     }
 }
 
 impl Store for () {
-    fn get_attribute(&self, _: &str) -> Option<ValueType> {
+    fn get_attribute(&self, _: &str) -> Option<f64> {
         None
     }
-    fn set_attribute(&mut self, _: &str, _: ValueType) -> Result<Option<ValueType>,()> {
+
+    fn set_attribute(&mut self, _: &str, _: f64) -> Result<Option<f64>,()> {
         Err(())
-    }
-}
-
-#[derive(Clone,Copy,Debug)]
-pub enum ValueType {
-    I64(i64),
-    F32(f32),
-}
-
-impl Add for ValueType {
-    type Output = ValueType;
-    fn add(self, other: ValueType) -> ValueType {
-        match (self, other) {
-            (ValueType::I64(a), ValueType::I64(b)) => ValueType::I64(a+b),
-            (ValueType::I64(a), ValueType::F32(b)) => ValueType::F32((a as f32)+b),
-            (ValueType::F32(a), ValueType::I64(b)) => ValueType::F32(a+(b as f32)),
-            (ValueType::F32(a), ValueType::F32(b)) => ValueType::F32(a+b),
-        }
-    }
-}
-
-impl Sub for ValueType {
-    type Output = ValueType;
-    fn sub(self, other: ValueType) -> ValueType {
-        match (self, other) {
-            (ValueType::I64(a), ValueType::I64(b)) => ValueType::I64(a-b),
-            (ValueType::I64(a), ValueType::F32(b)) => ValueType::F32((a as f32)-b),
-            (ValueType::F32(a), ValueType::I64(b)) => ValueType::F32(a-(b as f32)),
-            (ValueType::F32(a), ValueType::F32(b)) => ValueType::F32(a-b),
-        }
-    }
-}
-
-impl Mul for ValueType {
-    type Output = ValueType;
-    fn mul(self, other: ValueType) -> ValueType {
-        match (self, other) {
-            (ValueType::I64(a), ValueType::I64(b)) => ValueType::I64(a*b),
-            (ValueType::I64(a), ValueType::F32(b)) => ValueType::F32((a as f32)*b),
-            (ValueType::F32(a), ValueType::I64(b)) => ValueType::F32(a*(b as f32)),
-            (ValueType::F32(a), ValueType::F32(b)) => ValueType::F32(a*b),
-        }
-    }
-}
-
-impl Div for ValueType {
-    type Output = ValueType;
-    fn div(self, other: ValueType) -> ValueType {
-        match (self, other) {
-            (ValueType::I64(a), ValueType::I64(b)) => ValueType::I64(a/b),
-            (ValueType::I64(a), ValueType::F32(b)) => ValueType::F32((a as f32)/b),
-            (ValueType::F32(a), ValueType::I64(b)) => ValueType::F32(a/(b as f32)),
-            (ValueType::F32(a), ValueType::F32(b)) => ValueType::F32(a/b),
-        }
-    }
-}
-
-impl ValueType {
-    pub fn get_i64(self) -> Option<i64> {
-        match self {
-            ValueType::I64(a) => Some(a),
-            _ => None,
-        }
-    }
-
-    pub fn get_f32(self) -> Option<f32> {
-        match self {
-            ValueType::F32(a) => Some(a),
-            _ => None,
-        }
-    }
-
-    pub fn pow(self, rhs: ValueType) -> ValueType {
-        match (self, rhs) {
-            (ValueType::I64(a), ValueType::I64(b)) => {
-                let b_as_u32;
-                if b < 0  {
-                    error!("Cannot pow to negative number {}", b);
-                    b_as_u32 = 0;
-                } else if b > (::std::u32::MAX as i64){
-                    error!("Exponent out of range: {}", b);
-                    b_as_u32 = ::std::u32::MAX;
-                } else {
-                    b_as_u32 = b as u32;
-                }
-                ValueType::I64(a.pow(b_as_u32))
-            }
-            (ValueType::I64(a), ValueType::F32(b)) => ValueType::F32((a as f32).powf(b)),
-            (ValueType::F32(a), ValueType::I64(b)) => {
-                let b_as_i32;
-                if b < (::std::i32::MIN as i64)  {
-                    error!("Exponent out of range: {}", b);
-                    b_as_i32 = 0;
-                } else if b > (::std::i32::MAX as i64){
-                    error!("Exponent out of range: {}", b);
-                    b_as_i32 = ::std::i32::MAX;
-                } else {
-                    b_as_i32 = b as i32;
-                }
-                ValueType::F32(a.powi(b_as_i32))
-            }
-            (ValueType::F32(a), ValueType::F32(b)) => ValueType::F32(a.powf(b)),
-        }
     }
 }
 
@@ -144,7 +41,7 @@ impl ValueType {
 #[derive(Clone,Debug)]
 pub enum ExpressionMember {
     Op(Operator),
-    Constant(ValueType),
+    Constant(f64),
     Variable {
         local: bool,
         name: String,
@@ -160,6 +57,19 @@ pub enum Operator {
     Pow,
 }
 
+impl Operator {
+    fn apply(self, lhs: f64, rhs: f64) -> Result<f64,ExpressionError> {
+        let result = match self {
+            Operator::Plus => lhs + rhs,
+            Operator::Minus => lhs - rhs,
+            Operator::Multiply => lhs * rhs,
+            Operator::Divide => lhs / rhs,
+            Operator::Pow => lhs.powf(rhs),
+        };
+        Ok(result)
+    }
+}
+
 #[derive(Clone,Debug)]
 pub struct ExpressionEvaluator {
     expression: Vec<ExpressionMember>,
@@ -173,15 +83,24 @@ pub enum ExpressionError {
 
 impl ExpressionEvaluator {
     /// Evaluates an expression using a context to get variables
-    pub fn evaluate<T,V>(&self, global_variables: &T, local_variables: &V) -> Result<ValueType,ExpressionError>
+    pub fn evaluate<T,V>(&self, global_variables: &T, local_variables: &V) -> Result<f64,ExpressionError>
     where T: Store,
           V: Store {
+        // The algorithm to execute such an expression is fairly simple:
+        //  - Create a stack to hold temporary values
+        //  - Iterate through the expression members
+        //   * If it is a number / variable, push it on the stack
+        //   * If it is an operator, pop the correct number of elements from the stack, compute the
+        //   result and push it on the stack
+        //  - At the end of the expression, the stack must contain one single value, which is the
+        //  result
         let mut stack = Vec::new();
         for member in self.expression.iter() {
             match *member {
                 Constant(value) => stack.push(value),
                 Variable{local,ref name} => {
                     let value = if local {
+                        // Error to reference an undefined variable
                         try!(local_variables.get_attribute(&name).ok_or_else(|| VariableNotFound(name.clone())))
                     } else {
                         try!(global_variables.get_attribute(&name).ok_or_else(|| VariableNotFound(name.clone())))
@@ -192,20 +111,14 @@ impl ExpressionEvaluator {
                     // First member will be the second one in the stack
                     let member2 = try!(stack.pop().ok_or_else(|| InvalidExpression(format!("Missing member for operator {:?}", operator))));
                     let member1 = try!(stack.pop().ok_or_else(|| InvalidExpression(format!("Missing member for operator {:?}", operator))));
-                    let result = match operator {
-                        Operator::Plus => member1 + member2,
-                        Operator::Minus => member1 - member2,
-                        Operator::Multiply => member1 * member2,
-                        Operator::Divide => member1 / member2,
-                        Operator::Pow => member1.pow(member2),
-                    };
+                    let result = try!(operator.apply(member1,member2));
                     stack.push(result);
                 }
             }
         }
-        let result = try!(stack.pop().ok_or_else(|| InvalidExpression("No result at the end of the expression".to_string())));
+        let result = try!(stack.pop().ok_or_else(|| InvalidExpression("No result at the end of the expression".into())));
         if !stack.is_empty() {
-            return Err(InvalidExpression("Stack not empty at the end of the expression".to_string()));
+            return Err(InvalidExpression("Stack not empty at the end of the expression".into()));
         }
         Ok(result)
     }
@@ -245,26 +158,25 @@ mod test {
 
     use super::ExpressionMember::*;
     use super::Operator;
-    use super::ValueType;
     use super::ExpressionEvaluator;
     #[test]
     fn evaluate_int() {
         let context = HashMap::new();
         let expression = ExpressionEvaluator::new(vec! [
-            Constant(ValueType::I64(1)),
-            Constant(ValueType::I64(2)),
+            Constant(1.0),
+            Constant(2.0),
             Op(Operator::Plus),
             ]);
 
-        assert!(expression.evaluate(&context,&()).unwrap().get_i64().unwrap() == 3);
+        assert!(expression.evaluate(&context,&()).unwrap() == 3.0);
     }
 
     #[test]
     fn incorrect_expression() {
         let context = HashMap::new();
         let expression = ExpressionEvaluator::new(vec! [
-            Constant(ValueType::I64(1)),
-            Constant(ValueType::I64(2)),
+            Constant(1.0),
+            Constant(2.0),
             Op(Operator::Plus),
             Op(Operator::Multiply),
             ]);
@@ -274,18 +186,18 @@ mod test {
     #[test]
     fn evaluate_int_variable() {
         let mut context = HashMap::new();
-        context.insert("forty_two".to_string(), ValueType::I64(42));
-        context.insert("two".to_string(), ValueType::I64(2));
+        context.insert("forty_two".to_string(), 42.0);
+        context.insert("two".to_string(), 2.0);
         // Calculates 2 * (forty_two / two) - 3
         let expression = ExpressionEvaluator::new(vec! [
-            Constant(ValueType::I64(2)),
+            Constant(2.0),
             Variable{local: false, name: "forty_two".to_string()},
             Variable{local: false, name: "two".to_string()},
             Op(Operator::Divide),
             Op(Operator::Multiply),
-            Constant(ValueType::I64(3)),
+            Constant(3.0),
             Op(Operator::Minus),
             ]);
-        assert!(expression.evaluate(&context,&()).unwrap().get_i64().unwrap() == 39);
+        assert!(expression.evaluate(&context,&()).unwrap() == 39.0);
     }
 }

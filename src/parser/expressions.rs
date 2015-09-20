@@ -1,4 +1,4 @@
-use expressions::{ExpressionEvaluator,ExpressionMember,Operator,ValueType};
+use expressions::{ExpressionEvaluator,ExpressionMember,Operator};
 
 pub fn combine(left: Node, right_vec: Vec<(Operator,Node)>) -> Node {
     let mut res = left;
@@ -31,8 +31,7 @@ pub enum Node {
     Multiply((Box<Node>,Box<Node>)),
     Divide((Box<Node>,Box<Node>)),
     Pow((Box<Node>,Box<Node>)),
-    I64(i64),
-    F32(f32),
+    F64(f64),
     Variable {
         local: bool,
         name: String,
@@ -74,11 +73,8 @@ impl Node {
                 r.convert(res);
                 res.push(ExpressionMember::Op(Operator::Pow));
             }
-            Node::I64(num) => {
-                res.push(ExpressionMember::Constant(ValueType::I64(num)));
-            }
-            Node::F32(num) => {
-                res.push(ExpressionMember::Constant(ValueType::F32(num)));
+            Node::F64(num) => {
+                res.push(ExpressionMember::Constant(num));
             }
             Node::Variable{local,name} => {
                 res.push(ExpressionMember::Variable{local:local,name:name});
@@ -96,7 +92,7 @@ mod tests {
         let to_parse = "1 + 2";
         let res = parser::expression_tree(to_parse).unwrap();
         match res {
-            Node::Plus((box Node::I64(1), box Node::I64(2))) => {}
+            Node::Plus((box Node::F64(1.0), box Node::F64(2.0))) => {}
             _ => panic!(),
         }
     }
@@ -106,8 +102,8 @@ mod tests {
         let res = parser::expression_tree(to_parse).unwrap();
         match res {
             Node::Plus((
-                    box Node::Plus((box Node::I64(1), box Node::I64(2))),
-                    box Node::I64(3)
+                    box Node::Plus((box Node::F64(1.0), box Node::F64(2.0))),
+                    box Node::F64(3.0)
                     )) => {}
             _ => panic!(),
         }
@@ -118,8 +114,8 @@ mod tests {
         let res = parser::expression_tree(to_parse).unwrap();
         match res {
             Node::Plus((
-                    box Node::Minus((box Node::I64(1), box Node::I64(2))),
-                    box Node::I64(3)
+                    box Node::Minus((box Node::F64(1.0), box Node::F64(2.0))),
+                    box Node::F64(3.0)
                     )) => {}
             _ => panic!(),
         }
@@ -127,8 +123,8 @@ mod tests {
         let res = parser::expression_tree(to_parse).unwrap();
         match res {
             Node::Minus((
-                    box Node::Plus((box Node::I64(1), box Node::I64(2))),
-                    box Node::I64(3)
+                    box Node::Plus((box Node::F64(1.0), box Node::F64(2.0))),
+                    box Node::F64(3.0)
                     )) => {}
             _ => panic!(),
         }
@@ -139,8 +135,8 @@ mod tests {
         let res = parser::expression_tree(to_parse).unwrap();
         match res {
             Node::Plus((
-                    box Node::I64(1),
-                    box Node::Multiply((box Node::I64(2), box Node::I64(3)))
+                    box Node::F64(1.0),
+                    box Node::Multiply((box Node::F64(2.0), box Node::F64(3.0)))
                     )) => {}
             _ => panic!(),
         }
@@ -148,8 +144,8 @@ mod tests {
         let res = parser::expression_tree(to_parse).unwrap();
         match res {
             Node::Plus((
-                    box Node::Multiply((box Node::I64(1), box Node::I64(2))),
-                    box Node::I64(3)
+                    box Node::Multiply((box Node::F64(1.0), box Node::F64(2.0))),
+                    box Node::F64(3.0)
                     )) => {}
             _ => panic!(),
         }

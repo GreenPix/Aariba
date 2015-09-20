@@ -21,9 +21,9 @@ prio4 -> Node
         / number
         / variable
 number -> Node
-	= [0-9]+ { 
-                let number: i64 = match_str.parse().unwrap();
-                Node::I64(number)
+	= [-+]?[0-9]+("."[0-9]+)?([eE][-+]?[0-9]+)? {
+                let number: f64 = match_str.parse().unwrap();
+                Node::F64(number)
         }
 
 prio1_operator -> Operator
