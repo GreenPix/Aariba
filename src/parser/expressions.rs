@@ -1,27 +1,62 @@
-use expressions::{ExpressionEvaluator,ExpressionMember,Operator,BinaryOperator};
+use expressions::{
+    ExpressionEvaluator,
+    ExpressionMember,
+    Operator,
+    BinaryOperator,
+    UnaryOperator,
+};
 
-pub fn combine(left: Node, right_vec: Vec<(BinaryOperator,Node)>) -> Node {
+pub enum BinOp {
+    Plus,
+    Minus,
+    Multiply,
+    Divide,
+    Pow,
+}
+
+pub fn combine(left: Node, right_vec: Vec<(BinOp,Node)>) -> Node {
     let mut res = left;
     for (op, right) in right_vec {
         match op {
-            BinaryOperator::Plus => {
+            BinOp::Plus => {
                 res = Node::Plus((Box::new(res),Box::new(right)));
             }
-            BinaryOperator::Minus => {
+            BinOp::Minus => {
                 res = Node::Minus((Box::new(res),Box::new(right)));
             }
-            BinaryOperator::Multiply => {
+            BinOp::Multiply => {
                 res = Node::Multiply((Box::new(res),Box::new(right)));
             }
-            BinaryOperator::Divide => {
+            BinOp::Divide => {
                 res = Node::Divide((Box::new(res),Box::new(right)));
             }
-            BinaryOperator::Pow => {
+            BinOp::Pow => {
                 res = Node::Pow((Box::new(res),Box::new(right)));
             }
         }
     }
     res
+}
+
+#[derive(Debug,Clone,Copy)]
+pub enum FunctionKind {
+    Sin,
+    Cos,
+    Rand,
+    Min,
+    Max,
+}
+
+impl Into<ExpressionMember> for FunctionKind {
+    fn into(self) -> ExpressionMember {
+        match self {
+            FunctionKind::Sin => {ExpressionMember::Op(Operator::Unary(UnaryOperator::Sin))}
+            FunctionKind::Cos => {ExpressionMember::Op(Operator::Unary(UnaryOperator::Cos))}
+            FunctionKind::Min => {ExpressionMember::Op(Operator::Binary(BinaryOperator::Min))}
+            FunctionKind::Max => {ExpressionMember::Op(Operator::Binary(BinaryOperator::Max))}
+            FunctionKind::Rand => {ExpressionMember::Op(Operator::Binary(BinaryOperator::Rand))}
+        }
+    }
 }
 
 #[derive(Debug,Clone)]
@@ -31,6 +66,10 @@ pub enum Node {
     Multiply((Box<Node>,Box<Node>)),
     Divide((Box<Node>,Box<Node>)),
     Pow((Box<Node>,Box<Node>)),
+    Function {
+        function: FunctionKind,
+        operands: Vec<Node>,
+    },
     F64(f64),
     Variable {
         local: bool,
@@ -78,6 +117,14 @@ impl Node {
             }
             Node::Variable{local,name} => {
                 res.push(ExpressionMember::Variable{local:local,name:name});
+            }
+            Node::Function{function,operands} => {
+                // TODO: insert check on function's number of operands
+                for operand in operands {
+                    operand.convert(res);
+                }
+                let operator = function.into();
+                res.push(operator);
             }
         }
     }

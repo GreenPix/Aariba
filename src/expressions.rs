@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use rand;
+
 use self::ExpressionMember::*;
 use self::ExpressionError::*;
 
@@ -50,17 +52,22 @@ pub enum ExpressionMember {
 
 #[derive(Clone,Copy,Debug)]
 pub enum Operator {
+    Unary(UnaryOperator),
     Binary(BinaryOperator),
 }
 
 impl Operator {
     fn apply(self, stack: &mut Vec<f64>) -> Result<f64,ExpressionError> {
         match self {
+            Operator::Unary(op) => {
+                let operand = try!(stack.pop().ok_or_else(|| InvalidExpression(format!("Missing member for operator {:?}", self))));
+                Ok(op.apply(operand))
+            }
             Operator::Binary(op) => {
                 let rhs = try!(stack.pop().ok_or_else(|| InvalidExpression(format!("Missing member for operator {:?}", self))));
                 let lhs = try!(stack.pop().ok_or_else(|| InvalidExpression(format!("Missing member for operator {:?}", self))));
                 Ok(op.apply(lhs,rhs))
-            }
+            },
         }
     }
 }
@@ -72,6 +79,9 @@ pub enum BinaryOperator {
     Multiply,
     Divide,
     Pow,
+    Min,
+    Max,
+    Rand,
 }
 
 impl BinaryOperator {
@@ -82,6 +92,28 @@ impl BinaryOperator {
             BinaryOperator::Multiply => lhs * rhs,
             BinaryOperator::Divide => lhs / rhs,
             BinaryOperator::Pow => lhs.powf(rhs),
+            BinaryOperator::Min => if lhs < rhs {lhs} else {rhs},
+            BinaryOperator::Max => if lhs > rhs {lhs} else {rhs},
+            BinaryOperator::Rand => {
+                let (min,max) = if lhs < rhs {(lhs,rhs)} else {(rhs,lhs)};
+                let rand: f64 = rand::random();
+                min + rand * (max - min)
+            }
+        }
+    }
+}
+
+#[derive(Clone,Copy,Debug)]
+pub enum UnaryOperator {
+    Sin,
+    Cos,
+}
+
+impl UnaryOperator {
+    fn apply(self, operand: f64) -> f64 {
+        match self {
+            UnaryOperator::Sin => { operand.sin() }
+            UnaryOperator::Cos => { operand.cos() }
         }
     }
 }

@@ -6,3 +6,4 @@ authors = ["Vaelden <maugan.villatel@gmail.com>"]
 [dependencies]
 peg = "*"
 log = "*"
+rand = "*"

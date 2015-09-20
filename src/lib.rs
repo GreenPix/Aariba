@@ -6,6 +6,7 @@
 #![cfg_attr(test,feature(box_patterns))]
 
 #[macro_use] extern crate log;
+extern crate rand;
 
 pub mod expressions;
 pub mod parser;

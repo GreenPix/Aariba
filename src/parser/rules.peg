@@ -1,4 +1,4 @@
-use super::expressions::{Node};
+use super::expressions::{Node,FunctionKind,BinOp};
 use super::expressions;
 use expressions::*;
 
@@ -19,6 +19,7 @@ prio3 -> Node
 prio4 -> Node
 	= "(" v:prio1 ")" { v }
         / number
+        / function
         / variable
 number -> Node
 	= [-+]?[0-9]+("."[0-9]+)?([eE][-+]?[0-9]+)? {
@@ -26,24 +27,39 @@ number -> Node
                 Node::F64(number)
         }
 
-prio1_operator -> BinaryOperator
-        = spaces "+" spaces { BinaryOperator::Plus }
-        / spaces "-" spaces { BinaryOperator::Minus }
+function -> Node
+        = name:function_name spaces "("args:expression_tree ** "," ")" {
+                Node::Function {
+                        function: name,
+                        operands: args,
+                }
+        }
 
-prio2_right -> (BinaryOperator,Node)
+function_name -> FunctionKind
+        = "rand" { FunctionKind::Rand }
+        / "min" { FunctionKind::Min }
+        / "max" { FunctionKind::Max }
+        / "sin" { FunctionKind::Sin }
+        / "cos" { FunctionKind::Cos }
+
+prio1_operator -> BinOp
+        = spaces "+" spaces { BinOp::Plus }
+        / spaces "-" spaces { BinOp::Minus }
+
+prio2_right -> (BinOp,Node)
         = op:prio1_operator r:prio2 { (op,r) }
 
-prio2_operator -> BinaryOperator
-        = spaces "*" spaces { BinaryOperator::Multiply }
-        / spaces "/" spaces { BinaryOperator::Divide }
+prio2_operator -> BinOp
+        = spaces "*" spaces { BinOp::Multiply }
+        / spaces "/" spaces { BinOp::Divide }
 
-prio3_right -> (BinaryOperator,Node)
+prio3_right -> (BinOp,Node)
         = op:prio2_operator r:prio3 { (op,r) }
 
-prio3_operator -> BinaryOperator
-        = spaces "^" spaces { BinaryOperator::Pow }
+prio3_operator -> BinOp
+        = spaces "^" spaces { BinOp::Pow }
 
-prio4_right -> (BinaryOperator,Node)
+prio4_right -> (BinOp,Node)
         = op:prio3_operator r:prio4 { (op,r) }
 
 variable -> Node
