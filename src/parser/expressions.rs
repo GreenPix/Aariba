@@ -1,22 +1,22 @@
-use expressions::{ExpressionEvaluator,ExpressionMember,Operator};
+use expressions::{ExpressionEvaluator,ExpressionMember,Operator,BinaryOperator};
 
-pub fn combine(left: Node, right_vec: Vec<(Operator,Node)>) -> Node {
+pub fn combine(left: Node, right_vec: Vec<(BinaryOperator,Node)>) -> Node {
     let mut res = left;
     for (op, right) in right_vec {
         match op {
-            Operator::Plus => {
+            BinaryOperator::Plus => {
                 res = Node::Plus((Box::new(res),Box::new(right)));
             }
-            Operator::Minus => {
+            BinaryOperator::Minus => {
                 res = Node::Minus((Box::new(res),Box::new(right)));
             }
-            Operator::Multiply => {
+            BinaryOperator::Multiply => {
                 res = Node::Multiply((Box::new(res),Box::new(right)));
             }
-            Operator::Divide => {
+            BinaryOperator::Divide => {
                 res = Node::Divide((Box::new(res),Box::new(right)));
             }
-            Operator::Pow => {
+            BinaryOperator::Pow => {
                 res = Node::Pow((Box::new(res),Box::new(right)));
             }
         }
@@ -51,27 +51,27 @@ impl Node {
             Node::Plus((l,r)) => {
                 l.convert(res);
                 r.convert(res);
-                res.push(ExpressionMember::Op(Operator::Plus));
+                res.push(ExpressionMember::Op(Operator::Binary(BinaryOperator::Plus)));
             }
             Node::Minus((l,r)) => {
                 l.convert(res);
                 r.convert(res);
-                res.push(ExpressionMember::Op(Operator::Minus));
+                res.push(ExpressionMember::Op(Operator::Binary(BinaryOperator::Minus)));
             }
             Node::Multiply((l,r)) => {
                 l.convert(res);
                 r.convert(res);
-                res.push(ExpressionMember::Op(Operator::Multiply));
+                res.push(ExpressionMember::Op(Operator::Binary(BinaryOperator::Multiply)));
             }
             Node::Divide((l,r)) => {
                 l.convert(res);
                 r.convert(res);
-                res.push(ExpressionMember::Op(Operator::Divide));
+                res.push(ExpressionMember::Op(Operator::Binary(BinaryOperator::Divide)));
             }
             Node::Pow((l,r)) => {
                 l.convert(res);
                 r.convert(res);
-                res.push(ExpressionMember::Op(Operator::Pow));
+                res.push(ExpressionMember::Op(Operator::Binary(BinaryOperator::Pow)));
             }
             Node::F64(num) => {
                 res.push(ExpressionMember::Constant(num));

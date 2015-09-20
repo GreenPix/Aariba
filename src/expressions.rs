@@ -50,6 +50,23 @@ pub enum ExpressionMember {
 
 #[derive(Clone,Copy,Debug)]
 pub enum Operator {
+    Binary(BinaryOperator),
+}
+
+impl Operator {
+    fn apply(self, stack: &mut Vec<f64>) -> Result<f64,ExpressionError> {
+        match self {
+            Operator::Binary(op) => {
+                let rhs = try!(stack.pop().ok_or_else(|| InvalidExpression(format!("Missing member for operator {:?}", self))));
+                let lhs = try!(stack.pop().ok_or_else(|| InvalidExpression(format!("Missing member for operator {:?}", self))));
+                Ok(op.apply(lhs,rhs))
+            }
+        }
+    }
+}
+
+#[derive(Clone,Copy,Debug)]
+pub enum BinaryOperator {
     Plus,
     Minus,
     Multiply,
@@ -57,16 +74,15 @@ pub enum Operator {
     Pow,
 }
 
-impl Operator {
-    fn apply(self, lhs: f64, rhs: f64) -> Result<f64,ExpressionError> {
-        let result = match self {
-            Operator::Plus => lhs + rhs,
-            Operator::Minus => lhs - rhs,
-            Operator::Multiply => lhs * rhs,
-            Operator::Divide => lhs / rhs,
-            Operator::Pow => lhs.powf(rhs),
-        };
-        Ok(result)
+impl BinaryOperator {
+    fn apply(self, lhs: f64, rhs: f64) -> f64 {
+        match self {
+            BinaryOperator::Plus => lhs + rhs,
+            BinaryOperator::Minus => lhs - rhs,
+            BinaryOperator::Multiply => lhs * rhs,
+            BinaryOperator::Divide => lhs / rhs,
+            BinaryOperator::Pow => lhs.powf(rhs),
+        }
     }
 }
 
@@ -108,11 +124,9 @@ impl ExpressionEvaluator {
                     stack.push(value);
                 },
                 Op(operator) => {
-                    // First member will be the second one in the stack
-                    let member2 = try!(stack.pop().ok_or_else(|| InvalidExpression(format!("Missing member for operator {:?}", operator))));
-                    let member1 = try!(stack.pop().ok_or_else(|| InvalidExpression(format!("Missing member for operator {:?}", operator))));
-                    let result = try!(operator.apply(member1,member2));
+                    let result = try!(operator.apply(&mut stack));
                     stack.push(result);
+                    // First member will be the second one in the stack
                 }
             }
         }
@@ -158,6 +172,7 @@ mod test {
 
     use super::ExpressionMember::*;
     use super::Operator;
+    use super::BinaryOperator;
     use super::ExpressionEvaluator;
     #[test]
     fn evaluate_int() {
@@ -165,7 +180,7 @@ mod test {
         let expression = ExpressionEvaluator::new(vec! [
             Constant(1.0),
             Constant(2.0),
-            Op(Operator::Plus),
+            Op(Operator::Binary(BinaryOperator::Plus)),
             ]);
 
         assert!(expression.evaluate(&context,&()).unwrap() == 3.0);
@@ -177,8 +192,8 @@ mod test {
         let expression = ExpressionEvaluator::new(vec! [
             Constant(1.0),
             Constant(2.0),
-            Op(Operator::Plus),
-            Op(Operator::Multiply),
+            Op(Operator::Binary(BinaryOperator::Plus)),
+            Op(Operator::Binary(BinaryOperator::Multiply)),
             ]);
         assert!(expression.evaluate(&context,&()).is_err());
     }
@@ -193,10 +208,10 @@ mod test {
             Constant(2.0),
             Variable{local: false, name: "forty_two".to_string()},
             Variable{local: false, name: "two".to_string()},
-            Op(Operator::Divide),
-            Op(Operator::Multiply),
+            Op(Operator::Binary(BinaryOperator::Divide)),
+            Op(Operator::Binary(BinaryOperator::Multiply)),
             Constant(3.0),
-            Op(Operator::Minus),
+            Op(Operator::Binary(BinaryOperator::Minus)),
             ]);
         assert!(expression.evaluate(&context,&()).unwrap() == 39.0);
     }

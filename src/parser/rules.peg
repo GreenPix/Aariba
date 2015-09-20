@@ -26,24 +26,24 @@ number -> Node
                 Node::F64(number)
         }
 
-prio1_operator -> Operator
-        = spaces "+" spaces { Operator::Plus }
-        / spaces "-" spaces { Operator::Minus }
+prio1_operator -> BinaryOperator
+        = spaces "+" spaces { BinaryOperator::Plus }
+        / spaces "-" spaces { BinaryOperator::Minus }
 
-prio2_right -> (Operator,Node)
+prio2_right -> (BinaryOperator,Node)
         = op:prio1_operator r:prio2 { (op,r) }
 
-prio2_operator -> Operator
-        = spaces "*" spaces { Operator::Multiply }
-        / spaces "/" spaces { Operator::Divide }
+prio2_operator -> BinaryOperator
+        = spaces "*" spaces { BinaryOperator::Multiply }
+        / spaces "/" spaces { BinaryOperator::Divide }
 
-prio3_right -> (Operator,Node)
+prio3_right -> (BinaryOperator,Node)
         = op:prio2_operator r:prio3 { (op,r) }
 
-prio3_operator -> Operator
-        = spaces "^" spaces { Operator::Pow }
+prio3_operator -> BinaryOperator
+        = spaces "^" spaces { BinaryOperator::Pow }
 
-prio4_right -> (Operator,Node)
+prio4_right -> (BinaryOperator,Node)
         = op:prio3_operator r:prio4 { (op,r) }
 
 variable -> Node
