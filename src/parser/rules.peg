@@ -2,7 +2,7 @@ use super::expressions::{Node,FunctionKind,BinOp};
 use super::expressions;
 use expressions::*;
 
-use rules::{Variable,RulesEvaluator};
+use rules::{Variable,RulesEvaluator,Instruction};
 
 #[pub]
 expression -> ExpressionEvaluator
@@ -63,7 +63,7 @@ prio4_right -> (BinOp,Node)
         = op:prio3_operator r:prio4 { (op,r) }
 
 variable -> Node
-        = l:"$"? name:ident { Node::Variable {local: !l.is_some(), name: name.to_string()} }
+        = l:"$"? name:ident { Node::Variable {local: l.is_none(), name: name.to_string()} }
 
 ident -> String
         = [a-zA-Z]+ { match_str.to_string() }
@@ -72,12 +72,18 @@ space = [ \t\n]
 spaces = [ \t\n]*
 
 #[pub]
-rules_list -> Vec<(Variable,ExpressionEvaluator)>
-        = assignment*
+rules_list -> Vec<Instruction>
+        = instruction*
 
-assignment -> (Variable,ExpressionEvaluator)
+instruction -> Instruction
+        = assignment
+
+assignment -> Instruction
         = global:"$"? name:ident spaces "=" spaces expr:expression ";" spaces {
-            (Variable::new(global.is_none(), name), expr)
+                Instruction::Assignment {
+                        variable: Variable::new(global.is_none(), name),
+                        expression: expr,
+                }
         }
 
 #[pub]

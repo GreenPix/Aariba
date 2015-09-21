@@ -15,8 +15,16 @@ impl Variable {
 }
 
 #[derive(Clone,Debug)]
+pub enum Instruction {
+    Assignment {
+        variable: Variable,
+        expression: ExpressionEvaluator,
+    },
+}
+
+#[derive(Clone,Debug)]
 pub struct RulesEvaluator {
-    expressions: Vec<(Variable,ExpressionEvaluator)>,
+    instructions: Vec<Instruction>,
 }
 
 #[derive(Clone,Debug)]
@@ -34,21 +42,25 @@ impl From<ExpressionError> for RulesError {
 impl RulesEvaluator {
     pub fn evaluate<T: Store>(&self, global: &mut T) -> Result<(),RulesError> {
         let mut local_variables = HashMap::new();
-        for &(Variable{local,ref name},ref expression) in self.expressions.iter() {
-            let res = try!(expression.evaluate(global, &local_variables));
-            if local {
-                local_variables.insert(name.to_string(), res);
-            } else {
-                let result = global.set_attribute(name, res);
-                if result.is_err() {
-                    return Err(RulesError::CannotSetVariable(name.to_string()));
+        for instruction in self.instructions.iter() {
+            match *instruction {
+                Instruction::Assignment {variable: Variable{local,ref name},ref expression} => {
+                    let res = try!(expression.evaluate(global, &local_variables));
+                    if local {
+                        local_variables.insert(name.clone(), res);
+                    } else {
+                        let result = global.set_attribute(name, res);
+                        if result.is_err() {
+                            return Err(RulesError::CannotSetVariable(name.clone()));
+                        }
+                    }
                 }
             }
         }
         Ok(())
     }
 
-    pub fn new(expressions: Vec<(Variable,ExpressionEvaluator)>) -> RulesEvaluator {
-        RulesEvaluator { expressions: expressions }
+    pub fn new(instructions: Vec<Instruction>) -> RulesEvaluator {
+        RulesEvaluator { instructions: instructions }
     }
 }
