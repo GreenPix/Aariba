@@ -20,7 +20,7 @@ prio4 -> Node
 	= "(" v:prio1 ")" { v }
         / number
         / function
-        / variable
+        / v:variable { v.into() }
 number -> Node
 	= [-+]?[0-9]+("."[0-9]+)?([eE][-+]?[0-9]+)? {
                 let number: f64 = match_str.parse().unwrap();
@@ -62,8 +62,8 @@ prio3_operator -> BinOp
 prio4_right -> (BinOp,Node)
         = op:prio3_operator r:prio4 { (op,r) }
 
-variable -> Node
-        = l:"$"? name:ident { Node::Variable {local: l.is_none(), name: name.to_string()} }
+variable -> Variable
+        = l:"$"? name:ident { Variable {local: l.is_none(), name: name.to_string()} }
 
 ident -> String
         = [a-zA-Z]+ { match_str.to_string() }
@@ -76,14 +76,35 @@ rules_list -> Vec<Instruction>
         = instruction*
 
 instruction -> Instruction
-        = assignment
+        = if
+        / assignment
 
 assignment -> Instruction
-        = global:"$"? name:ident spaces "=" spaces expr:expression ";" spaces {
+        = spaces variable:variable spaces "=" spaces expr:expression ";" spaces {
                 Instruction::Assignment {
-                        variable: Variable::new(global.is_none(), name),
+                        variable: variable,
                         expression: expr,
                 }
+        }
+
+if -> Instruction
+        = spaces "if" spaces variable:variable then:instruction_bloc else_branch:else_block?
+        {
+                Instruction::If {
+                        condition: variable,
+                        then: then,
+                        else_branch: else_branch,
+                }
+        }
+
+instruction_bloc -> RulesEvaluator
+        =  spaces "{" spaces instructions:rules_evaluator spaces "}" spaces {
+                instructions
+        }
+
+else_block -> RulesEvaluator
+        = "else" block:instruction_bloc {
+                block
         }
 
 #[pub]

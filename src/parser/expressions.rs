@@ -6,6 +6,8 @@ use expressions::{
     UnaryOperator,
 };
 
+use rules;
+
 pub enum BinOp {
     Plus,
     Minus,
@@ -75,6 +77,15 @@ pub enum Node {
         local: bool,
         name: String,
     },
+}
+
+impl From<rules::Variable> for Node {
+    fn from(v: rules::Variable) -> Node {
+        Node::Variable {
+            local: v.local,
+            name: v.name,
+        }
+    }
 }
 
 pub fn convert(expression: Node) -> ExpressionEvaluator {
