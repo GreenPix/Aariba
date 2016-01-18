@@ -4,9 +4,6 @@ version = "0.1.0"
 authors = ["Vaelden <maugan.villatel@gmail.com>"]
 
 [dependencies]
+peg = "*"
 log = "*"
 rand = "*"
-
-[dependencies.peg]
-git = "https://github.com/kevinmehall/rust-peg.git"
-rev = "abc05a47374cc2618806d5812c7c78a1329d6c85"
