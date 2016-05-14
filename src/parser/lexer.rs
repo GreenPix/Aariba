@@ -96,6 +96,7 @@ impl <'a> Iterator for Tokenizer<'a> {
             '[' => Token::LeftArray,
             ']' => Token::RightArray,
             '+' => Token::Plus,
+            '-' => Token::Minus,
             '*' => Token::Multiply,
             '/' => Token::Divide,
             '^' => Token::Power,
@@ -114,21 +115,6 @@ impl <'a> Iterator for Tokenizer<'a> {
             c if c.is_numeric() => {
                 self.inner.rewind();
                 Token::Float(self.parse_number())
-            }
-            '-' => {
-                // Special case for - : it can be an operator in an expression or a negative number
-                // They can be differenciated by the following character
-                match self.inner.next() {
-                    Some(c) if c.is_numeric() => {
-                        // Negative number
-                        self.inner.rewind();
-                        Token::Float(-self.parse_number())
-                    }
-                    _ => {
-                        self.inner.rewind();
-                        Token::Minus
-                    }
-                }
             }
             other => return Some(Err(format!("Unrecognized character {}", other))),
         };

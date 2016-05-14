@@ -25,6 +25,7 @@ pub enum Expr {
     },
     Function(Func, Vec<Box<Expr>>),
     Op(Box<Expr>, Opcode, Box<Expr>),
+    Signed(Sign, Box<Expr>),
 }
 
 #[derive(Copy, Clone)]
@@ -43,6 +44,12 @@ pub enum Func {
     Max,
     Sin,
     Cos,
+}
+
+#[derive(Copy,Clone)]
+pub enum Sign {
+    Plus,
+    Minus,
 }
 
 impl Debug for Expr {
@@ -65,6 +72,17 @@ impl Debug for Expr {
                 write!(fmt, ")")
             }
             Op(ref l, op, ref r) => write!(fmt, "({:?} {:?} {:?})", l, op, r),
+            Signed(sign, ref e) => write!(fmt, "{:?}({:?})", sign, e),
+        }
+    }
+}
+
+impl Debug for Sign {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        use self::Sign::*;
+        match *self {
+            Minus => write!(fmt, "-"),
+            Plus => write!(fmt, "+"),
         }
     }
 }

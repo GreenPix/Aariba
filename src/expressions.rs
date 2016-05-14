@@ -130,6 +130,7 @@ impl BinaryOperator {
 
 #[derive(Clone,Copy,Debug)]
 pub enum UnaryOperator {
+    Minus,
     Sin,
     Cos,
 }
@@ -137,8 +138,9 @@ pub enum UnaryOperator {
 impl UnaryOperator {
     fn apply(self, operand: f64) -> f64 {
         match self {
-            UnaryOperator::Sin => { operand.sin() }
-            UnaryOperator::Cos => { operand.cos() }
+            UnaryOperator::Sin => operand.sin(),
+            UnaryOperator::Cos => operand.cos(),
+            UnaryOperator::Minus => (-operand),
         }
     }
 }

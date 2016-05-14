@@ -1,5 +1,5 @@
 // Mostly taken from Nikomatsakis LALRPOP tutorial
-use super::ast::{Expr, Opcode, Func, Assignment};
+use super::ast::{Expr, Opcode, Func, Assignment, Sign};
 use super::lexer::Token;
 
 grammar;
@@ -10,8 +10,7 @@ Tier<Op,NextTier>: Box<Expr> = {
 };
 
 pub Expr = Tier<ExprOp, Factor>;
-Factor = Tier<FactorOp, Power>;
-Power = Tier<PowerOp, Term>;
+Factor = Tier<FactorOp, SignedFactor>;
 
 ExprOp: Opcode = {
     "+" => Opcode::Plus,
@@ -25,6 +24,22 @@ FactorOp: Opcode = {
 
 PowerOp: Opcode = {
     "^" => Opcode::Pow,
+};
+
+SignedFactor: Box<Expr> = {
+    Sign SignedFactor => Box::new(Expr::Signed(<>)),
+    Power,
+};
+
+Sign: Sign = {
+    "-" => Sign::Minus,
+    "+" => Sign::Plus,
+};
+
+// This must be done separately, because 2 ^ 3 ^ 4 must be parsed (2 ^ (3 ^ 4))
+Power: Box<Expr> = {
+    Term PowerOp Power => Box::new(Expr::Op(<>)),
+    Term,
 };
 
 Term: Box<Expr> = {

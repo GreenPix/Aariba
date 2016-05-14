@@ -2,6 +2,7 @@ use self::ast::{
     Opcode,
     Func,
     Assignment,
+    Sign,
 };
 use expressions::{
     ExpressionEvaluator,
@@ -43,6 +44,13 @@ impl Expr {
                 r.convert(res);
                 let operator = op.into();
                 res.push(operator);
+            }
+            Expr::Signed(sign, r) => {
+                r.convert(res);
+                match sign {
+                    Sign::Plus => {}
+                    Sign::Minus => res.push(ExpressionMember::Op(Operator::Unary(UnaryOperator::Minus))),
+                }
             }
         }
     }
@@ -97,31 +105,28 @@ impl Into<ExpressionMember> for Func {
 mod tests {
     use super::ast::Expr;
     use super::lexer::Tokenizer;
+    use expressions::ExpressionEvaluator;
 
-    fn parse_expr(input: &str) -> Option<Box<Expr>> {
+    fn parse_expr_to_ast(input: &str) -> Option<Box<Expr>> {
         let tokenizer = Tokenizer::new(input);
         let tokenizer_mapped = tokenizer.map(|e| {
             e.map(|token| ((),token,()))
         });
         super::parser::parse_Expr(tokenizer_mapped).ok()
     }
-    macro_rules! test_parse {
-        ($to_parse:expr, $str:expr) => {
-            let res = parse_expr($to_parse).unwrap();
-            assert_eq!(format!("{:?}", res),$str);
-        }
+
+    fn parse_expr(input: &str) -> ExpressionEvaluator {
+        let mut vec = vec![];
+        let ast = parse_expr_to_ast(input).unwrap();
+        ast.convert(&mut vec);
+        ExpressionEvaluator::new(vec)
     }
 
-    // These tests should ideally parse correctly
-    // The current lexer/parser cannot differenciate between a unary or binary '-'
-    // So the current rule is that if '-' is immediatly followed by a number, it is unary
-    // If not it is binary
-    #[test]
-    fn weird_behaviour() {
-        // Here '-' is treated as unary whereas it should be binary
-        assert!(parse_expr("1 -2").is_none());
-        // Here '-' is treated as binary whereas it should be unnary
-        assert!(parse_expr("- 2").is_none());
+    macro_rules! test_parse {
+        ($to_parse:expr, $str:expr) => {
+            let res = parse_expr_to_ast($to_parse).unwrap();
+            assert_eq!(format!("{:?}", res),$str);
+        }
     }
 
     #[test]
@@ -144,9 +149,28 @@ mod tests {
         test_parse!("1*2+3", "((1 * 2) + 3)");
     }
     #[test]
+    fn arity_minus() {
+        test_parse!("1 -2", "(1 - 2)");
+        test_parse!("- 1 -2", "(-(1) - 2)");
+    }
+    #[test]
+    fn exponentiation_signed() {
+        test_parse!("-2^2", "-((2 ^ 2))");
+        assert!(parse_expr_to_ast("2^-2").is_none());
+        test_parse!("2^(-2)", "(2 ^ -(2))");
+    }
+    #[test]
+    fn exponentiation_recursivity() {
+        test_parse!("2^3^4", "(2 ^ (3 ^ 4))");
+    }
+    #[test]
+    fn parenthesis() {
+        test_parse!("1 - (2 + 3)", "(1 - (2 + 3))");
+    }
+    #[test]
     fn local_global_variables() {
         let to_parse = "local";
-        let res = parse_expr(to_parse).unwrap();
+        let res = parse_expr_to_ast(to_parse).unwrap();
         match *res {
             Expr::Variable{local: true, name} => {
                 assert_eq!(&name, "local");
@@ -154,7 +178,7 @@ mod tests {
             _ => panic!(),
         }
         let to_parse = "$global";
-        let res = parse_expr(to_parse).unwrap();
+        let res = parse_expr_to_ast(to_parse).unwrap();
         match *res {
             Expr::Variable{local: false, name} => {
                 assert_eq!(&name, "global");
@@ -170,8 +194,17 @@ mod tests {
 
     #[test]
     fn variable_names() {
-        assert!(parse_expr("test_underscore").is_some());
-        assert!(parse_expr("_bad_leading_underscore").is_none());
-        assert!(parse_expr("UpperCaseTest").is_some());
+        assert!(parse_expr_to_ast("test_underscore").is_some());
+        assert!(parse_expr_to_ast("_bad_leading_underscore").is_none());
+        assert!(parse_expr_to_ast("UpperCaseTest").is_some());
+    }
+
+    // Test the evaluation
+    #[test]
+    fn evaluation() {
+        let res = parse_expr("2^2^2").evaluate(&(), &()).unwrap();
+        assert_eq!(res, 16.0);
+        let res = parse_expr("-1-2-3").evaluate(&(), &()).unwrap();
+        assert_eq!(res, -6.0);
     }
 }
