@@ -66,7 +66,7 @@ variable -> Node
         = l:"$"? name:ident { Node::Variable {local: !l.is_some(), name: name.to_string()} }
 
 ident -> String
-        = [a-zA-Z]+ { match_str.to_string() }
+        = [a-zA-Z\._]+ { match_str.to_string() }
 
 space = [ \t\n]
 spaces = [ \t\n]*
