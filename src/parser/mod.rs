@@ -167,4 +167,11 @@ mod tests {
     fn test_addition_variables() {
         test_parse!("local + $global * 3", "(local + ($global * 3))");
     }
+
+    #[test]
+    fn variable_names() {
+        assert!(parse_expr("test_underscore").is_some());
+        assert!(parse_expr("_bad_leading_underscore").is_none());
+        assert!(parse_expr("UpperCaseTest").is_some());
+    }
 }
