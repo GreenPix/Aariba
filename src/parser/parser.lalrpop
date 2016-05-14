@@ -9,7 +9,7 @@ Tier<Op,NextTier>: Box<Expr> = {
     NextTier
 };
 
-Expr = Tier<ExprOp, Factor>;
+pub Expr = Tier<ExprOp, Factor>;
 Factor = Tier<FactorOp, Power>;
 Power = Tier<PowerOp, Term>;
 

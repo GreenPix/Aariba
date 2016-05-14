@@ -257,14 +257,15 @@ mod test {
 
     #[test]
     fn evaluate_int_variable() {
+        use super::Variable as Var;
         let mut context = HashMap::new();
         context.insert("forty_two".to_string(), 42.0);
         context.insert("two".to_string(), 2.0);
         // Calculates 2 * (forty_two / two) - 3
         let expression = ExpressionEvaluator::new(vec! [
             Constant(2.0),
-            Variable{local: false, name: "forty_two".to_string()},
-            Variable{local: false, name: "two".to_string()},
+            Variable(Var::new(false, "forty_two".to_string())),
+            Variable(Var::new(false, "two".to_string())),
             Op(Operator::Binary(BinaryOperator::Divide)),
             Op(Operator::Binary(BinaryOperator::Multiply)),
             Constant(3.0),

@@ -18,6 +18,7 @@ pub use self::ast::Expr;
 
 mod ast;
 mod lexer;
+#[allow(dead_code)]
 mod parser;
 
 impl Expr {
@@ -89,5 +90,81 @@ impl Into<ExpressionMember> for Func {
             Max => ExpressionMember::Op(Operator::Binary(BinaryOperator::Max)),
             Rand => ExpressionMember::Op(Operator::Binary(BinaryOperator::Rand)),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ast::Expr;
+    use super::lexer::Tokenizer;
+
+    fn parse_expr(input: &str) -> Option<Box<Expr>> {
+        let tokenizer = Tokenizer::new(input);
+        let tokenizer_mapped = tokenizer.map(|e| {
+            e.map(|token| ((),token,()))
+        });
+        super::parser::parse_Expr(tokenizer_mapped).ok()
+    }
+    macro_rules! test_parse {
+        ($to_parse:expr, $str:expr) => {
+            let res = parse_expr($to_parse).unwrap();
+            assert_eq!(format!("{:?}", res),$str);
+        }
+    }
+
+    // These tests should ideally parse correctly
+    // The current lexer/parser cannot differenciate between a unary or binary '-'
+    // So the current rule is that if '-' is immediatly followed by a number, it is unary
+    // If not it is binary
+    #[test]
+    fn weird_behaviour() {
+        // Here '-' is treated as unary whereas it should be binary
+        assert!(parse_expr("1 -2").is_none());
+        // Here '-' is treated as binary whereas it should be unnary
+        assert!(parse_expr("- 2").is_none());
+    }
+
+    #[test]
+    fn simple_addition() {
+        test_parse!("1+2", "(1 + 2)");
+    }
+    #[test]
+    fn multiple_additions() {
+        test_parse!("1 + 2 + 3", "((1 + 2) + 3)");
+    }
+    #[test]
+    fn substraction() {
+        test_parse!("1 - 2 + 3", "((1 - 2) + 3)");
+        test_parse!("1 + 2 - 3", "((1 + 2) - 3)");
+        test_parse!("1 - 2 - 3", "((1 - 2) - 3)");
+    }
+    #[test]
+    fn priority() {
+        test_parse!("1+2*3", "(1 + (2 * 3))");
+        test_parse!("1*2+3", "((1 * 2) + 3)");
+    }
+    #[test]
+    fn local_global_variables() {
+        let to_parse = "local";
+        let res = parse_expr(to_parse).unwrap();
+        match *res {
+            Expr::Variable{local: true, name} => {
+                assert_eq!(&name, "local");
+            }
+            _ => panic!(),
+        }
+        let to_parse = "$global";
+        let res = parse_expr(to_parse).unwrap();
+        match *res {
+            Expr::Variable{local: false, name} => {
+                assert_eq!(&name, "global");
+            }
+            _ => panic!(),
+        }
+    }
+
+    #[test]
+    fn test_addition_variables() {
+        test_parse!("local + $global * 3", "(local + ($global * 3))");
     }
 }
