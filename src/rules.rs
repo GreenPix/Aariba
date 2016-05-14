@@ -3,18 +3,6 @@ use std::collections::HashMap;
 use expressions::*;
 
 #[derive(Clone,Debug)]
-pub struct Variable {
-    local: bool,
-    name: String,
-}
-
-impl Variable {
-    pub fn new(local: bool, name: String) -> Variable {
-        Variable {local: local, name: name}
-    }
-}
-
-#[derive(Clone,Debug)]
 pub struct RulesEvaluator {
     expressions: Vec<(Variable,ExpressionEvaluator)>,
 }

@@ -2,8 +2,12 @@
 name = "aariba"
 version = "0.1.0"
 authors = ["Vaelden <maugan.villatel@gmail.com>"]
+build = "build.rs"
 
 [dependencies]
-peg = "*"
-log = "*"
-rand = "*"
+log = "0.3.6"
+rand = "0.3.14"
+lalrpop-util = "0.11.0"
+
+[build-dependencies]
+lalrpop = "0.11.0"

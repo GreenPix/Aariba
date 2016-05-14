@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 use rand;
 
-use self::ExpressionMember::*;
 use self::ExpressionError::*;
 
 pub trait Store {
@@ -44,11 +43,37 @@ impl Store for () {
 pub enum ExpressionMember {
     Op(Operator),
     Constant(f64),
-    Variable {
-        local: bool,
-        name: String,
-    },
+    Variable(Variable),
 }
+
+#[derive(Clone,Debug)]
+pub struct Variable {
+    pub local: bool,
+    pub name: String,
+}
+
+impl Variable {
+    pub fn new(local: bool, name: String) -> Variable {
+        Variable {local: local, name: name}
+    }
+}
+
+impl From<String> for Variable {
+    fn from(mut name: String) -> Variable {
+        let local;
+        if name.starts_with("$") {
+            name.remove(0);
+            local = false;
+        } else {
+            local = true;
+        }
+        Variable {
+            local: local,
+            name: name,
+        }
+    }
+}
+
 
 #[derive(Clone,Copy,Debug)]
 pub enum Operator {
@@ -145,8 +170,8 @@ impl ExpressionEvaluator {
         let mut stack = Vec::new();
         for member in self.expression.iter() {
             match *member {
-                Constant(value) => stack.push(value),
-                Variable{local,ref name} => {
+                ExpressionMember::Constant(value) => stack.push(value),
+                ExpressionMember::Variable(Variable{local,ref name}) => {
                     let value = if local {
                         // Error to reference an undefined variable
                         try!(local_variables.get_attribute(&name).ok_or_else(|| VariableNotFound(name.clone())))
@@ -155,7 +180,7 @@ impl ExpressionEvaluator {
                     };
                     stack.push(value);
                 },
-                Op(operator) => {
+                ExpressionMember::Op(operator) => {
                     let result = try!(operator.apply(&mut stack));
                     stack.push(result);
                     // First member will be the second one in the stack
@@ -172,7 +197,7 @@ impl ExpressionEvaluator {
     /// Get list of global variables referenced by this expression
     pub fn get_global_variable_list(&self) -> Vec<String> {
         self.expression.iter().filter_map(|member| {
-            if let Variable{local: false, ref name} = *member {
+            if let ExpressionMember::Variable(Variable{local: false, ref name}) = *member {
                 Some(name.clone())
             } else {
                 None
@@ -183,7 +208,7 @@ impl ExpressionEvaluator {
     /// Get list of local variables referenced by this expression
     pub fn get_local_variable_list(&self) -> Vec<String> {
         self.expression.iter().filter_map(|member| {
-            if let Variable{local: true, ref name} = *member {
+            if let ExpressionMember::Variable(Variable{local: true, ref name}) = *member {
                 Some(name.clone())
             } else {
                 None
