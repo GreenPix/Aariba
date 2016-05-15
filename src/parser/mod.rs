@@ -197,6 +197,7 @@ mod tests {
         assert!(parse_expr_to_ast("test_underscore").is_some());
         assert!(parse_expr_to_ast("_bad_leading_underscore").is_none());
         assert!(parse_expr_to_ast("UpperCaseTest").is_some());
+        assert!(parse_expr_to_ast("Point.Test").is_some());
     }
 
     // Test the evaluation

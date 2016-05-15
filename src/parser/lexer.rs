@@ -192,6 +192,6 @@ impl <'a> Tokenizer<'a> {
 }
 
 fn is_valid_id(&c: &char) -> bool {
-    c.is_alphanumeric() || c == '_'
+    c.is_alphanumeric() || c == '_' || c == '.'
 }
 
