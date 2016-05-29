@@ -14,7 +14,7 @@ fn main() {
                 let mut new_rules = String::new();
                 write!(new_rules, "{}{}\n", accumulated_rules, line).unwrap();
                 println!("Evaluating the following rules:\n{}", new_rules);
-                let res = aariba::parser::rules_evaluator(&new_rules);
+                let res = aariba::parse_rule(&new_rules);
                 match res {
                     Ok(evaluator) => {
                         let mut global_variables = HashMap::new();

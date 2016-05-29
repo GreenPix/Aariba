@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 use rand;
 
-use self::ExpressionMember::*;
 use self::ExpressionError::*;
 
 pub trait Store {
@@ -44,11 +43,37 @@ impl Store for () {
 pub enum ExpressionMember {
     Op(Operator),
     Constant(f64),
-    Variable {
-        local: bool,
-        name: String,
-    },
+    Variable(Variable),
 }
+
+#[derive(Clone,Debug)]
+pub struct Variable {
+    pub local: bool,
+    pub name: String,
+}
+
+impl Variable {
+    pub fn new(local: bool, name: String) -> Variable {
+        Variable {local: local, name: name}
+    }
+}
+
+impl From<String> for Variable {
+    fn from(mut name: String) -> Variable {
+        let local;
+        if name.starts_with("$") {
+            name.remove(0);
+            local = false;
+        } else {
+            local = true;
+        }
+        Variable {
+            local: local,
+            name: name,
+        }
+    }
+}
+
 
 #[derive(Clone,Copy,Debug)]
 pub enum Operator {
@@ -105,6 +130,7 @@ impl BinaryOperator {
 
 #[derive(Clone,Copy,Debug)]
 pub enum UnaryOperator {
+    Minus,
     Sin,
     Cos,
 }
@@ -112,8 +138,9 @@ pub enum UnaryOperator {
 impl UnaryOperator {
     fn apply(self, operand: f64) -> f64 {
         match self {
-            UnaryOperator::Sin => { operand.sin() }
-            UnaryOperator::Cos => { operand.cos() }
+            UnaryOperator::Sin => operand.sin(),
+            UnaryOperator::Cos => operand.cos(),
+            UnaryOperator::Minus => (-operand),
         }
     }
 }
@@ -145,8 +172,8 @@ impl ExpressionEvaluator {
         let mut stack = Vec::new();
         for member in self.expression.iter() {
             match *member {
-                Constant(value) => stack.push(value),
-                Variable{local,ref name} => {
+                ExpressionMember::Constant(value) => stack.push(value),
+                ExpressionMember::Variable(Variable{local,ref name}) => {
                     let value = if local {
                         // Error to reference an undefined variable
                         try!(local_variables.get_attribute(&name).ok_or_else(|| VariableNotFound(name.clone())))
@@ -155,7 +182,7 @@ impl ExpressionEvaluator {
                     };
                     stack.push(value);
                 },
-                Op(operator) => {
+                ExpressionMember::Op(operator) => {
                     let result = try!(operator.apply(&mut stack));
                     stack.push(result);
                     // First member will be the second one in the stack
@@ -172,7 +199,7 @@ impl ExpressionEvaluator {
     /// Get list of global variables referenced by this expression
     pub fn get_global_variable_list(&self) -> Vec<String> {
         self.expression.iter().filter_map(|member| {
-            if let Variable{local: false, ref name} = *member {
+            if let ExpressionMember::Variable(Variable{local: false, ref name}) = *member {
                 Some(name.clone())
             } else {
                 None
@@ -183,7 +210,7 @@ impl ExpressionEvaluator {
     /// Get list of local variables referenced by this expression
     pub fn get_local_variable_list(&self) -> Vec<String> {
         self.expression.iter().filter_map(|member| {
-            if let Variable{local: true, ref name} = *member {
+            if let ExpressionMember::Variable(Variable{local: true, ref name}) = *member {
                 Some(name.clone())
             } else {
                 None
@@ -232,14 +259,15 @@ mod test {
 
     #[test]
     fn evaluate_int_variable() {
+        use super::Variable as Var;
         let mut context = HashMap::new();
         context.insert("forty_two".to_string(), 42.0);
         context.insert("two".to_string(), 2.0);
         // Calculates 2 * (forty_two / two) - 3
         let expression = ExpressionEvaluator::new(vec! [
             Constant(2.0),
-            Variable{local: false, name: "forty_two".to_string()},
-            Variable{local: false, name: "two".to_string()},
+            Variable(Var::new(false, "forty_two".to_string())),
+            Variable(Var::new(false, "two".to_string())),
             Op(Operator::Binary(BinaryOperator::Divide)),
             Op(Operator::Binary(BinaryOperator::Multiply)),
             Constant(3.0),
