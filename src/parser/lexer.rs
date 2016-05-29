@@ -25,6 +25,17 @@ pub enum Token {
     Sin,
     Cos,
     Equal,
+    DoubleEqual,
+    Different,
+    If,
+    Else,
+    Exists,
+    SuperiorStrict,
+    SuperiorEqual,
+    InferiorStrict,
+    InferiorEqual,
+    LogicalAnd,
+    LogicalOr,
     Dollar,
 }
 
@@ -100,8 +111,40 @@ impl <'a> Iterator for Tokenizer<'a> {
             '*' => Token::Multiply,
             '/' => Token::Divide,
             '^' => Token::Power,
-            '=' => Token::Equal,
             '$' => Token::Dollar,
+            '=' => match self.inner.next() {
+                Some('=') => Token::DoubleEqual,
+                other => return Some(Err(format!("Unfinished comparison != {:?}", other))),
+            },
+            '!' => match self.inner.next() {
+                Some('=') => Token::Different,
+                _ => {
+                    self.inner.rewind();
+                    Token::Equal
+                }
+            },
+            '>' => match self.inner.next() {
+                Some('=') => Token::SuperiorEqual,
+                _ => {
+                    self.inner.rewind();
+                    Token::SuperiorStrict
+                }
+            },
+            '<' => match self.inner.next() {
+                Some('=') => Token::InferiorEqual,
+                _ => {
+                    self.inner.rewind();
+                    Token::InferiorStrict
+                }
+            },
+            '&' => match self.inner.next() {
+                Some('&') => Token::LogicalAnd,
+                other => return Some(Err(format!("Unfinished logical and {:?}", other))),
+            },
+            '|' => match self.inner.next() {
+                Some('|') => Token::LogicalOr,
+                other => return Some(Err(format!("Unfinished logical or {:?}", other))),
+            },
             c if c.is_alphabetic() => {
                 self.inner.rewind();
                 self.parse_word()
@@ -143,6 +186,9 @@ impl <'a> Tokenizer<'a> {
             "max" => return Token::Max,
             "sin" => return Token::Sin,
             "cos" => return Token::Cos,
+            "if" => return Token::If,
+            "else" => return Token::Else,
+            "exists" => return Token::Exists,
             _ => {}
         }
         assert!(word.len() != 0);
