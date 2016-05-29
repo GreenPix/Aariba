@@ -3,6 +3,8 @@ use self::ast::{
     Func,
     Assignment,
     Sign,
+    Instruction,
+    IfBlock
 };
 use expressions::{
     ExpressionEvaluator,
@@ -61,17 +63,24 @@ pub fn parse_rule(input: &str) -> Result<RulesEvaluator,String> {
     let tokenizer_mapped = tokenizer.map(|e| {
         e.map(|token| ((),token,()))
     });
-    let assignments = match parser::parse_Rule(tokenizer_mapped) {
+    let instructions = match parser::parse_Rule(tokenizer_mapped) {
         Ok(t) => t,
         Err(e) => {
             return Err(format!("Parsing error {:?}", e));
         }
     };
     let mut res = Vec::new();
-    for Assignment{local, variable, expr} in assignments {
-        let mut vec = Vec::new();
-        expr.convert(&mut vec);
-        res.push((Variable{local:local, name:variable}, ExpressionEvaluator::new(vec)));
+    for instruction in instructions {
+        match instruction {
+            Instruction::Assignment(Assignment{local, variable, expr}) => {
+                let mut vec = Vec::new();
+                expr.convert(&mut vec);
+                res.push((Variable{local:local, name:variable}, ExpressionEvaluator::new(vec)));
+            }
+            Instruction::If(IfBlock{condition, then_block, else_block}) => {
+                unimplemented!();
+            }
+        }
     }
     Ok(RulesEvaluator::new(res))
 }

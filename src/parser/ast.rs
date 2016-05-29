@@ -1,6 +1,54 @@
 // Mostly taken from Nikomatsakis LALRPOP tutorial
 use std::fmt::{Debug, Formatter, Error};
 
+pub enum Instruction {
+    Assignment(Assignment),
+    If(IfBlock),
+}
+
+impl Instruction {
+    pub fn new_assignment(l: bool, v: String, e: Box<Expr>) -> Instruction {
+        Instruction::Assignment(Assignment::new(l,v,e))
+    }
+
+    pub fn new_if(c: Box<Condition>, t: Vec<Instruction>, e: Option<Vec<Instruction>>) -> Instruction {
+        Instruction::If(IfBlock {
+            condition: c,
+            then_block: t,
+            else_block: e
+        })
+    }
+}
+
+pub struct IfBlock {
+    pub condition: Box<Condition>,
+    pub then_block: Vec<Instruction>,
+    pub else_block: Option<Vec<Instruction>>,
+}
+
+pub enum Condition {
+    Comparison(Box<Expr>, CompOp, Box<Expr>),
+    Logic(Box<Condition>, LogicOp, Box<Condition>),
+    Exists(String),
+}
+
+#[derive(Copy, Clone)]
+pub enum CompOp {
+    SuperiorStrict,
+    SuperiorEqual,
+    InferiorStrict,
+    InferiorEqual,
+    Equal,
+    Different,
+}
+
+#[derive(Copy, Clone)]
+pub enum LogicOp {
+    And,
+    Or,
+    Xor,
+}
+
 pub struct Assignment {
     pub local: bool,
     pub variable: String,
@@ -110,5 +158,76 @@ impl Debug for Func {
             Sin => write!(fmt, "sin"),
             Cos => write!(fmt, "cos"),
         }
+    }
+}
+
+impl Debug for Instruction {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        match *self {
+            Instruction::Assignment(ref a) => a.fmt(fmt),
+            Instruction::If(ref i) => i.fmt(fmt),
+        }
+    }
+}
+
+impl Debug for Assignment {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        let local = if self.local {""} else {"$"};
+        write!(fmt, "{}{} = {:?};", local, self.variable, self.expr)
+    }
+}
+
+impl Debug for IfBlock {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        try!(write!(fmt, "if {:?} {{ ", self.condition));
+        for expr in self.then_block.iter() {
+            try!(expr.fmt(fmt));
+        }
+        try!(write!(fmt, " }}"));
+        if let Some(ref e) = self.else_block {
+            try!(write!(fmt, " else {{ "));
+            for expr in e.iter() {
+                try!(expr.fmt(fmt));
+            }
+            try!(write!(fmt, " }}"));
+        }
+        Ok(())
+    }
+}
+
+impl Debug for Condition {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        match *self {
+            Condition::Comparison(ref l, op, ref r) => write!(fmt, "({:?} {:?} {:?})", l, op, r),
+            Condition::Logic(ref l, op, ref r) => write!(fmt, "({:?} {:?} {:?})", l, op, r),
+            Condition::Exists(ref v) => write!(fmt, "exists({})", v),
+        }
+    }
+}
+
+impl Debug for CompOp {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        use self::CompOp::*;
+        let s = match *self {
+            SuperiorStrict => ">",
+            SuperiorEqual  => ">=",
+            InferiorStrict => "<",
+            InferiorEqual => "<=",
+            Equal => "==",
+            Different => "!=",
+        };
+        fmt.write_str(s)
+    }
+}
+
+impl Debug for LogicOp {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
+        use self::LogicOp::*;
+        let s = match *self {
+            And => "&&",
+            Or  => "||",
+            Xor => "^",
+        };
+        fmt.write_str(s)
     }
 }
