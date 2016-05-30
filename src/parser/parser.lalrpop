@@ -80,8 +80,22 @@ If: Instruction = "if" <Condition> <InstructionBlock> <("else" <InstructionBlock
 };
 
 Condition: Box<Condition> = {
+    <l:Condition> "||" <r:ConditionAnd> => {
+        Box::new(Condition::Logic(l,LogicOp::Or,r))
+    },
+    ConditionAnd
+};
+
+ConditionAnd: Box<Condition> = {
+    <l:ConditionAnd> "&&" <r:ConditionTerm> => {
+        Box::new(Condition::Logic(l,LogicOp::And,r))
+    },
+    ConditionTerm
+};
+
+ConditionTerm: Box<Condition> = {
     Expr CompOp Expr => Box::new(Condition::Comparison(<>)),
-    Condition LogicOp Condition => Box::new(Condition::Logic(<>)),
+    // TODO: Remove mandatory parenthesis after introducing precedence between operators
     "exists" "(" "$"<Ident> ")" => Box::new(Condition::Exists(<>)),
     "(" <Condition> ")"
 };
@@ -95,10 +109,11 @@ CompOp: CompOp = {
     "!=" => CompOp::Different,
 };
 
+// TODO: Introduce precedence between operators
 LogicOp: LogicOp = {
     "&&" => LogicOp::And,
     "||" => LogicOp::Or,
-    "^"  => LogicOp::Xor,
+    //"^"  => LogicOp::Xor, // Conflicts with exponentiation, to be discussed later
 };
 
 Instruction: Instruction = {
@@ -108,7 +123,7 @@ Instruction: Instruction = {
 
 InstructionBlock: Vec<Instruction> = "{" <Instruction*> "}";
 
-pub Rule = Assign*;
+pub Rule = Instruction*;
 
 extern {
     type Location = ();
@@ -149,8 +164,8 @@ extern {
         ">=" => Token::SuperiorEqual,
         "<" => Token::InferiorStrict,
         "<=" => Token::InferiorEqual,
-        "&&" => Token::And,
-        "||" => Token::Or,
+        "&&" => Token::LogicalAnd,
+        "||" => Token::LogicalOr,
     }
 }
 

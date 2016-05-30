@@ -1,6 +1,8 @@
 // Mostly taken from Nikomatsakis LALRPOP tutorial
 use std::fmt::{Debug, Formatter, Error};
 
+pub use conditions::{CompOp, LogicOp};
+
 pub enum Instruction {
     Assignment(Assignment),
     If(IfBlock),
@@ -30,23 +32,6 @@ pub enum Condition {
     Comparison(Box<Expr>, CompOp, Box<Expr>),
     Logic(Box<Condition>, LogicOp, Box<Condition>),
     Exists(String),
-}
-
-#[derive(Copy, Clone)]
-pub enum CompOp {
-    SuperiorStrict,
-    SuperiorEqual,
-    InferiorStrict,
-    InferiorEqual,
-    Equal,
-    Different,
-}
-
-#[derive(Copy, Clone)]
-pub enum LogicOp {
-    And,
-    Or,
-    Xor,
 }
 
 pub struct Assignment {
@@ -226,7 +211,6 @@ impl Debug for LogicOp {
         let s = match *self {
             And => "&&",
             Or  => "||",
-            Xor => "^",
         };
         fmt.write_str(s)
     }

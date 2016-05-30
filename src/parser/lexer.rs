@@ -114,14 +114,14 @@ impl <'a> Iterator for Tokenizer<'a> {
             '$' => Token::Dollar,
             '=' => match self.inner.next() {
                 Some('=') => Token::DoubleEqual,
-                other => return Some(Err(format!("Unfinished comparison != {:?}", other))),
-            },
-            '!' => match self.inner.next() {
-                Some('=') => Token::Different,
                 _ => {
                     self.inner.rewind();
                     Token::Equal
                 }
+            },
+            '!' => match self.inner.next() {
+                Some('=') => Token::Different,
+                other => return Some(Err(format!("Unfinished comparison != {:?}", other))),
             },
             '>' => match self.inner.next() {
                 Some('=') => Token::SuperiorEqual,

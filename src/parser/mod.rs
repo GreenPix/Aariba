@@ -3,7 +3,8 @@ use self::ast::{
     Func,
     Assignment,
     Sign,
-    Instruction,
+    Instruction as AstInstruction,
+    Condition as AstCondition,
     IfBlock
 };
 use expressions::{
@@ -14,7 +15,11 @@ use expressions::{
     UnaryOperator,
     Variable,
 };
-use rules::RulesEvaluator;
+use rules::{
+    RulesEvaluator,
+    Instruction,
+};
+use conditions::Condition;
 use self::lexer::Tokenizer;
 
 pub use self::ast::Expr;
@@ -69,20 +74,53 @@ pub fn parse_rule(input: &str) -> Result<RulesEvaluator,String> {
             return Err(format!("Parsing error {:?}", e));
         }
     };
-    let mut res = Vec::new();
-    for instruction in instructions {
+    Ok(convert_instructions(instructions))
+}
+
+fn convert_instructions(ast: Vec<AstInstruction>) -> RulesEvaluator {
+    let mut res = RulesEvaluator::new();
+    for instruction in ast {
         match instruction {
-            Instruction::Assignment(Assignment{local, variable, expr}) => {
-                let mut vec = Vec::new();
-                expr.convert(&mut vec);
-                res.push((Variable{local:local, name:variable}, ExpressionEvaluator::new(vec)));
+            AstInstruction::Assignment(Assignment{local, variable, expr}) => {
+                let i = Instruction::Assignment {
+                    variable: Variable { local: local, name: variable },
+                    expression: convert_expression(*expr),
+                };
+                res.push(i);
             }
-            Instruction::If(IfBlock{condition, then_block, else_block}) => {
-                unimplemented!();
+            AstInstruction::If(IfBlock{condition, then_block, else_block}) => {
+                let i = Instruction::IfBlock {
+                    condition: convert_condition(*condition),
+                    then_block: convert_instructions(then_block),
+                    else_block: else_block.map(convert_instructions),
+                };
+                res.push(i);
             }
         }
     }
-    Ok(RulesEvaluator::new(res))
+    res
+}
+
+fn convert_condition(ast: AstCondition) -> Condition {
+    match ast {
+        AstCondition::Logic(l, op, r) => {
+            Condition::Logic(Box::new(convert_condition(*l)),
+                             op,
+                             Box::new(convert_condition(*r)))
+        }
+        AstCondition::Comparison(l, op, r) => {
+            Condition::Comparison(convert_expression(*l), op, convert_expression(*r))
+        }
+        AstCondition::Exists(name) => {
+            Condition::Exists(name)
+        }
+    }
+}
+
+fn convert_expression(expr: Expr) -> ExpressionEvaluator {
+    let mut vec = Vec::new();
+    expr.convert(&mut vec);
+    ExpressionEvaluator::new(vec)
 }
 
 impl Into<ExpressionMember> for Opcode {

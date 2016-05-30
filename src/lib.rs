@@ -4,9 +4,11 @@
 
 #[macro_use] extern crate log;
 extern crate rand;
+extern crate ordered_float;
 
 pub mod expressions;
 mod parser;
 pub mod rules;
+pub mod conditions;
 
 pub use self::parser::parse_rule;
