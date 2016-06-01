@@ -4,6 +4,32 @@ use std::mem;
 use expressions::*;
 use conditions::Condition;
 
+pub trait Opaque: Sized {
+    type Context;
+
+    fn get(&mut self, context: &mut Self::Context) -> Option<StoreType<Self>>;
+    fn set(&mut self,
+           name: &str,
+           value: StoreType<Self>,
+           context: &mut Self::Context)
+        -> Result<Option<StoreType<Self>>,()>;
+}
+
+impl Opaque for () {
+    type Context = HashMap<String,StoreType<()>>;
+
+    fn get(&mut self, _context: &mut Self::Context) -> Option<StoreType<()>> {
+        None
+    }
+    fn set(&mut self,
+           _name: &str,
+           _value: StoreType<()>,
+           _context: &mut Self::Context)
+        -> Result<Option<StoreType<Self>>,()> {
+            Err(())
+        }
+}
+
 #[derive(Clone,Debug)]
 pub enum Instruction {
     Assignment {
@@ -35,7 +61,7 @@ impl From<ExpressionError> for RulesError {
 }
 
 impl RulesEvaluator {
-    pub fn evaluate<T: Store>(&self, global: &mut T) -> Result<(),RulesError> {
+    pub fn evaluate<T: Opaque<Context=U> + Clone, U: Store<T>>(&self, global: &mut U) -> Result<(),RulesError> {
         let mut local = Scopes::new();
         self.evaluate_inner(global, &mut local)
     }
@@ -44,9 +70,7 @@ impl RulesEvaluator {
         RulesEvaluator { instructions: Vec::new() }
     }
 
-    fn evaluate_inner<T: Store>(&self,
-                                global: &mut T,
-                                local: &mut Scopes) -> Result<(),RulesError> {
+    fn evaluate_inner<T: Opaque<Context=U> + Clone, U: Store<T>>(&self, global: &mut U, local: &mut Scopes<T>) -> Result<(),RulesError> {
         // New scope
         local.push();
         for instruction in self.instructions.iter() {
@@ -57,9 +81,9 @@ impl RulesEvaluator {
                 } => {
                     let res = try!(expression.evaluate(global, local));
                     if l {
-                        local.set_variable(name, res);
+                        local.set_variable(name, StoreType::F64(res));
                     } else {
-                        let result = global.set_attribute(name, res);
+                        let result = global.set_attribute(name, StoreType::F64(res));
                         if result.is_err() {
                             return Err(RulesError::CannotSetVariable(name.to_string()));
                         }
@@ -89,11 +113,11 @@ impl RulesEvaluator {
     }
 }
 
-struct Scopes {
-    inner: Vec<HashMap<String,f64>>,
+struct Scopes<T> {
+    inner: Vec<HashMap<String,StoreType<T>>>,
 }
 
-impl Scopes {
+impl<T: Clone> Scopes<T> {
     fn push(&mut self) {
         self.inner.push(HashMap::new());
     }
@@ -102,18 +126,18 @@ impl Scopes {
         self.inner.pop();
     }
 
-    fn new() -> Scopes {
+    fn new() -> Scopes<T> {
         Scopes { inner: Vec::with_capacity(4) }
     }
 
-    fn set_variable(&mut self, name: &str, value: f64) {
+    fn set_variable(&mut self, name: &str, value: StoreType<T>) {
         // Will never return Err
         let _ = self.set_attribute(name, value);
     }
 }
 
-impl Store for Scopes {
-    fn get_attribute(&self, name: &str) -> Option<f64> {
+impl<T: Clone> Store<T> for Scopes<T> {
+    fn get_attribute(&self, name: &str) -> Option<StoreType<T>> {
         for scope in self.inner.iter().rev() {
             let op = scope.get(name);
             if op.is_some() { return op.cloned(); }
@@ -121,7 +145,7 @@ impl Store for Scopes {
         None
     }
 
-    fn set_attribute(&mut self, name: &str, value: f64) -> Result<Option<f64>,()> {
+    fn set_attribute(&mut self, name: &str, value: StoreType<T>) -> Result<Option<StoreType<T>>,()> {
         for scope in self.inner.iter_mut().rev() {
             if let Some(ref mut e) = scope.get_mut(name) {
                 return Ok(Some(mem::replace(e, value)));

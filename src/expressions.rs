@@ -4,30 +4,36 @@ use rand;
 
 use self::ExpressionError::*;
 
-pub trait Store {
-    fn get_attribute(&self, var: &str) -> Option<f64>;
+#[derive(Debug,Clone)]
+pub enum StoreType<T> {
+    F64(f64),
+    Opaque(T),
+}
+
+pub trait Store<T> {
+    fn get_attribute(&self, var: &str) -> Option<StoreType<T>>;
     /// Set the attribute "var" to "value"
     ///
     /// Returns the old value, if any
-    fn set_attribute(&mut self, var: &str, value: f64) -> Result<Option<f64>,()>;
+    fn set_attribute(&mut self, var: &str, value: StoreType<T>) -> Result<Option<StoreType<T>>,()>;
 }
 
-impl Store for HashMap<String,f64> {
-    fn get_attribute(&self, var: &str) -> Option<f64> {
+impl<T: Clone> Store<T> for HashMap<String,StoreType<T>> {
+    fn get_attribute(&self, var: &str) -> Option<StoreType<T>> {
         self.get(var).cloned()
     }
 
-    fn set_attribute(&mut self, var: &str, value: f64) -> Result<Option<f64>,()> {
+    fn set_attribute(&mut self, var: &str, value: StoreType<T>) -> Result<Option<StoreType<T>>,()> {
         Ok(self.insert(var.into(), value))
     }
 }
 
-impl Store for () {
-    fn get_attribute(&self, _: &str) -> Option<f64> {
+impl<T> Store<T> for () {
+    fn get_attribute(&self, _: &str) -> Option<StoreType<T>> {
         None
     }
 
-    fn set_attribute(&mut self, _: &str, _: f64) -> Result<Option<f64>,()> {
+    fn set_attribute(&mut self, _: &str, _: StoreType<T>) -> Result<Option<StoreType<T>>,()> {
         Err(())
     }
 }
@@ -154,13 +160,14 @@ pub struct ExpressionEvaluator {
 pub enum ExpressionError {
     VariableNotFound(String),
     InvalidExpression(String),
+    InvalidOpaqueStructure(String),
 }
 
 impl ExpressionEvaluator {
     /// Evaluates an expression using a context to get variables
-    pub fn evaluate<T,V>(&self, global_variables: &T, local_variables: &V) -> Result<f64,ExpressionError>
-    where T: Store,
-          V: Store {
+    pub fn evaluate<T,U,V>(&self, global_variables: &U, local_variables: &V) -> Result<f64,ExpressionError>
+    where U: Store<T>,
+          V: Store<T> {
         // The algorithm to execute such an expression is fairly simple:
         //  - Create a stack to hold temporary values
         //  - Iterate through the expression members
@@ -180,7 +187,10 @@ impl ExpressionEvaluator {
                     } else {
                         try!(global_variables.get_attribute(&name).ok_or_else(|| VariableNotFound(name.clone())))
                     };
-                    stack.push(value);
+                    match value {
+                        StoreType::F64(v) => stack.push(v),
+                        StoreType::Opaque(o) => return Err(InvalidOpaqueStructure(name.clone())),
+                    }
                 },
                 ExpressionMember::Op(operator) => {
                     let result = try!(operator.apply(&mut stack));
@@ -233,9 +243,10 @@ mod test {
     use super::Operator;
     use super::BinaryOperator;
     use super::ExpressionEvaluator;
+    use super::StoreType;
     #[test]
     fn evaluate_int() {
-        let context = HashMap::new();
+        let context = HashMap::<String,StoreType<()>>::new();
         let expression = ExpressionEvaluator::new(vec! [
             Constant(1.0),
             Constant(2.0),
@@ -247,7 +258,7 @@ mod test {
 
     #[test]
     fn incorrect_expression() {
-        let context = HashMap::new();
+        let context = HashMap::<String,StoreType<()>>::new();
         let expression = ExpressionEvaluator::new(vec! [
             Constant(1.0),
             Constant(2.0),
@@ -260,9 +271,9 @@ mod test {
     #[test]
     fn evaluate_int_variable() {
         use super::Variable as Var;
-        let mut context = HashMap::new();
-        context.insert("forty_two".to_string(), 42.0);
-        context.insert("two".to_string(), 2.0);
+        let mut context = HashMap::<String,StoreType<()>>::new();
+        context.insert("forty_two".to_string(), StoreType::F64(42.0));
+        context.insert("two".to_string(), StoreType::F64(2.0));
         // Calculates 2 * (forty_two / two) - 3
         let expression = ExpressionEvaluator::new(vec! [
             Constant(2.0),

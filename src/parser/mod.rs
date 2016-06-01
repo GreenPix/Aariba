@@ -250,9 +250,9 @@ mod tests {
     // Test the evaluation
     #[test]
     fn evaluation() {
-        let res = parse_expr("2^2^2").evaluate(&(), &()).unwrap();
+        let res = parse_expr("2^2^2").evaluate::<(),(),()>(&(), &()).unwrap();
         assert_eq!(res, 16.0);
-        let res = parse_expr("-1-2-3").evaluate(&(), &()).unwrap();
+        let res = parse_expr("-1-2-3").evaluate::<(),(),()>(&(), &()).unwrap();
         assert_eq!(res, -6.0);
     }
 }

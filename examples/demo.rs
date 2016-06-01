@@ -5,10 +5,12 @@ use std::fs::File;
 use std::io::Read;
 use std::collections::HashMap;
 
+use aariba::expressions::StoreType;
+
 fn main() {
     let mut args = env::args_os();
     args.next();
-    let mut global_variables = HashMap::new();
+    let mut global_variables = HashMap::<String,StoreType<()>>::new();
     for filename in args {
         let mut file = match File::open(filename) {
             Ok(file) => file,

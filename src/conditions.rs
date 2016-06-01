@@ -30,7 +30,7 @@ pub enum LogicOp {
 }
 
 impl Condition {
-    pub fn evaluate<T: Store, V: Store>(&self, global: &T, local: &V)
+    pub fn evaluate<T, U: Store<T>, V: Store<T>>(&self, global: &U, local: &V)
                                         -> Result<bool,ExpressionError> {
         match *self {
             Logic(ref l, op, ref r) => {

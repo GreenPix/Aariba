@@ -4,6 +4,8 @@ use std::io::{self,BufRead};
 use std::collections::HashMap;
 use std::fmt::Write;
 
+use aariba::expressions::StoreType;
+
 fn main() {
     let stdin = io::stdin();
     let mut accumulated_rules = String::new();
@@ -17,7 +19,7 @@ fn main() {
                 let res = aariba::parse_rule(&new_rules);
                 match res {
                     Ok(evaluator) => {
-                        let mut global_variables = HashMap::new();
+                        let mut global_variables = HashMap::<String,StoreType<()>>::new();
                         match evaluator.evaluate(&mut global_variables) {
                             Ok(()) => {
                                 println!("Global variables: {:#?}", global_variables);
