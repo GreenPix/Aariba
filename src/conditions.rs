@@ -1,5 +1,3 @@
-use ordered_float::OrderedFloat;
-
 use expressions::{ExpressionEvaluator,ExpressionError,Store};
 
 use self::CompOp::*;
@@ -42,8 +40,8 @@ impl Condition {
                 }                    
             }
             Comparison(ref left, op, ref right) => {
-                let l = OrderedFloat(try!(left.evaluate(global, local)));
-                let r = OrderedFloat(try!(right.evaluate(global, local)));
+                let l = try!(left.evaluate(global, local));
+                let r = try!(right.evaluate(global, local));
                 match op {
                     SuperiorStrict => Ok(l > r),
                     InferiorStrict => Ok(l < r),

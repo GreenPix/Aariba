@@ -4,7 +4,6 @@
 
 #[macro_use] extern crate log;
 extern crate rand;
-extern crate ordered_float;
 
 pub mod expressions;
 mod parser;
